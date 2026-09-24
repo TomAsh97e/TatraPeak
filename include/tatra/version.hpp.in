@@ -1,0 +1,5 @@
+#pragma once
+#include <string_view>
+namespace tatra {
+inline constexpr std::string_view version = "@PROJECT_VERSION@";
+}

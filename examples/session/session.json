@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "observer": {
+    "latitude_deg": 49.3,
+    "longitude_deg": 19.98,
+    "height": {
+      "mode": "above_dem",
+      "metres": 2.0
+    }
+  },
+  "camera": {
+    "width_px": 1280,
+    "height_px": 720,
+    "horizontal_fov_deg": 60.0
+  },
+  "poses_file": "poses.json",
+  "frames_file": "frames.json"
+}
