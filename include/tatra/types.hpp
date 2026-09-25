@@ -33,7 +33,8 @@ struct GeoCoord {
 
 struct GeoPosition {
     GeoCoord coord;
-    double ellipsoid_height_m = 0.0; // WGS84 ellipsoid, NOT catalog elevation.
+    // Height in metres above the WGS84 reference ellipsoid.
+    double ellipsoid_height_m = 0.0;
 };
 
 struct EcefPoint { Eigen::Vector3d value_m = Eigen::Vector3d::Zero(); };
