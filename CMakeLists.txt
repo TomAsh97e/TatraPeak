@@ -53,6 +53,7 @@ foreach(app IN ITEMS tatra tatra-prepare)
     tatra_configure_target(${app})
 endforeach()
 target_link_libraries(tatra PRIVATE TatraPeak::evaluation)
+target_compile_definitions(tatra PRIVATE TATRA_BUILD_DESKTOP_IO=$<BOOL:${TATRA_BUILD_DESKTOP_IO}>)
 
 if(TATRA_BUILD_TESTS)
     add_subdirectory(tests)

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "timestamp_ns": 42,
+  "observer": {
+    "latitude_deg": 49.0,
+    "longitude_deg": 20.0,
+    "height": {"mode": "above_dem", "metres": 2.0}
+  },
+  "camera": {"width_px": 1280, "height_px": 720, "horizontal_fov_deg": 90.0},
+  "orientation": {"heading_deg": 90.0, "pitch_deg": 0.0, "roll_deg": 0.0},
+  "options": {
+    "min_range_m": 10.0,
+    "max_range_m": 2000.0,
+    "near_z_m": 0.1,
+    "visibility": {
+      "sample_step_m": 5.0,
+      "clearance_band_m": 0.25,
+      "start_guard_m": 1.0,
+      "target_guard_m": 5.0,
+      "max_samples": 800
+    }
+  }
+}

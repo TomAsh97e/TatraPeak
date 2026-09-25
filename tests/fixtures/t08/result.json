@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "timestamp_ns": 42,
+  "metadata": {"program_version": "test", "dataset_id": "fixture", "dataset_sha256": ""},
+  "options": {
+    "min_range_m": 500.0, "max_range_m": 30000.0, "near_z_m": 0.01,
+    "visibility": {"sample_step_m": 10.0, "clearance_band_m": 0.5,
+      "start_guard_m": 2.0, "target_guard_m": 30.0, "max_samples": 10000}
+  },
+  "diagnostics": {"catalog_count": 1, "outside_range_count": 0,
+    "projected_count": 1, "visibility_sample_count": 3},
+  "observations": [{
+    "id": "test:peak", "name": "Szczyt & \"Żółć\"",
+    "geometry_position": {"latitude_deg": 49.0, "longitude_deg": 20.0, "ellipsoid_height_m": 1000.0},
+    "geometry_height_source": "VerifiedEllipsoid",
+    "display_elevation": {"metres": 970.0, "vertical_reference": "unspecified", "source": "fixture"},
+    "direction": {"azimuth_deg": 0.0, "elevation_deg": 0.0, "slant_range_m": 1000.0},
+    "projection": {"state": "InFrame", "pixel": {"u": 640.0, "v": 360.0}, "camera_depth_m": 1000.0},
+    "visibility": {"state": "MissingTerrain", "min_sampled_clearance_m": 12.5,
+      "first_blocker_distance_m": null, "sample_count": 3, "reason": "NoData in fixture"}
+  }],
+  "warnings": [{"code": "MissingTerrain", "message": "Terrain data is incomplete for one or more lines of sight."}]
+}
