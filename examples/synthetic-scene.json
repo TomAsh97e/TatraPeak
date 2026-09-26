@@ -4,7 +4,8 @@
   "observer": {
     "latitude_deg": 0.0,
     "longitude_deg": 0.0,
-    "height": {"mode": "ellipsoid", "metres": 1000.0}
+    "height": {"mode": "ellipsoid", "metres": 1000.0},
+    "simulated": true
   },
   "camera": {
     "width_px": 1280,

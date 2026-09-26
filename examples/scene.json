@@ -7,7 +7,8 @@
     "height": {
       "mode": "above_dem",
       "metres": 2.0
-    }
+    },
+    "simulated": true
   },
   "camera": {
     "width_px": 1280,

@@ -1,6 +1,8 @@
 #pragma once
 #include <cstddef>
+#include <optional>
 #include <tatra/terrain.hpp>
+#include <vector>
 
 namespace tatra {
 enum class VisibilityState { VisibleInModel, OccludedInModel, Uncertain, MissingTerrain };
@@ -25,10 +27,32 @@ struct VisibilityResult {
     std::string reason;
 };
 
+enum class VisibilitySampleTerrainState { Valid, OutsideCoverage, NoData, NonFinite };
+
+struct VisibilityDebugSample {
+    std::size_t index = 0;
+    double distance_from_observer_m = 0.0;
+    GeoPosition ray_position;
+    VisibilitySampleTerrainState terrain_state = VisibilitySampleTerrainState::Valid;
+    std::optional<double> terrain_ellipsoid_height_m;
+    std::optional<double> clearance_m;
+};
+
+struct VisibilityTrace {
+    VisibilityResult result;
+    std::vector<VisibilityDebugSample> samples;
+};
+
 // Samples the guarded observer-to-peak segment in ECEF. Terrain is queried at
 // the geodetic position of each ray sample, so ellipsoid curvature remains in
 // the model. Known occlusion takes precedence over earlier missing samples.
 [[nodiscard]] VisibilityResult traceVisibility(const Observer& observer, const Peak& peak,
                                                const ITerrain& terrain,
                                                const VisibilityOptions& options);
+
+// Diagnostic variant used by explicit debug tooling. It records every visited
+// interior sample; the regular visibility path performs no sample allocations.
+[[nodiscard]] VisibilityTrace traceVisibilityDebug(const Observer& observer, const Peak& peak,
+                                                   const ITerrain& terrain,
+                                                   const VisibilityOptions& options);
 } // namespace tatra

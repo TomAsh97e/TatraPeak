@@ -4,6 +4,7 @@ project(TatraPeak VERSION 0.1.0 LANGUAGES CXX)
 option(TATRA_BUILD_TESTS "Build TatraPeak tests" ON)
 option(TATRA_BUILD_DESKTOP_IO "Build desktop adapters (requires GDAL)" OFF)
 option(TATRA_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+set(TATRA_REAL_DATASET_DIR "" CACHE PATH "Optional validated dataset used by real-data tests")
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if(TATRA_BUILD_TESTS)
@@ -36,10 +37,11 @@ if(TATRA_BUILD_DESKTOP_IO)
         adapters/desktop/dataset_loader.cpp adapters/desktop/geotiff_loader.cpp
         adapters/desktop/scene_loader.cpp adapters/desktop/session_loader.cpp
         adapters/desktop/result_writer.cpp adapters/desktop/svg_writer.cpp
-        adapters/desktop/data_preparation.cpp)
+        adapters/desktop/data_preparation.cpp adapters/desktop/file_hash.cpp
+        adapters/desktop/osm_peak_importer.cpp adapters/desktop/manifest_parser.cpp)
     add_library(TatraPeak::io ALIAS tatra_io)
     target_link_libraries(tatra_io PUBLIC TatraPeak::core
-        PRIVATE GDAL::GDAL nlohmann_json::nlohmann_json)
+        PRIVATE GDAL::GDAL GeographicLib nlohmann_json::nlohmann_json)
     tatra_configure_target(tatra_io)
 endif()
 
@@ -54,6 +56,8 @@ foreach(app IN ITEMS tatra tatra-prepare)
 endforeach()
 target_link_libraries(tatra PRIVATE TatraPeak::evaluation)
 target_compile_definitions(tatra PRIVATE TATRA_BUILD_DESKTOP_IO=$<BOOL:${TATRA_BUILD_DESKTOP_IO}>)
+target_compile_definitions(tatra-prepare PRIVATE
+    TATRA_BUILD_DESKTOP_IO=$<BOOL:${TATRA_BUILD_DESKTOP_IO}>)
 
 if(TATRA_BUILD_TESTS)
     add_subdirectory(tests)

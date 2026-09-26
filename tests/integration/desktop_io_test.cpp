@@ -25,8 +25,9 @@ std::string lineContaining(const std::string& text, const std::string& needle) {
     const auto begin = text.rfind('\n', position);
     const auto end = text.find('\n', position);
     return text.substr(begin == std::string::npos ? 0 : begin + 1,
-                       end == std::string::npos ? std::string::npos
-                                                : end - (begin == std::string::npos ? 0 : begin + 1));
+                       end == std::string::npos
+                           ? std::string::npos
+                           : end - (begin == std::string::npos ? 0 : begin + 1));
 }
 
 class Terrain final : public ITerrain {
@@ -102,6 +103,7 @@ TEST_F(DesktopIo, HandwrittenSceneAndJsonRoundTrip) {
 TEST_F(DesktopIo, EllipsoidIntrinsicsAndAbsentOptions) {
     auto document = fixture("scene.json");
     document["observer"]["height"] = {{"mode", "ellipsoid"}, {"metres", -12.0}};
+    document["observer"]["simulated"] = true;
     document["camera"] = {{"width_px", 100}, {"height_px", 200}, {"fx_px", 70},
                           {"fy_px", 80},     {"cx_px", -5},      {"cy_px", 220}};
     document.erase("options");
@@ -109,6 +111,7 @@ TEST_F(DesktopIo, EllipsoidIntrinsicsAndAbsentOptions) {
     ASSERT_TRUE(std::holds_alternative<FrameQuery>(result));
     const auto& query = std::get<FrameQuery>(result);
     EXPECT_DOUBLE_EQ(query.observer.position.ellipsoid_height_m, -12.0);
+    EXPECT_TRUE(query.observer.simulated);
     EXPECT_DOUBLE_EQ(query.camera.fx_px, 70.0);
     EXPECT_DOUBLE_EQ(query.camera.fy_px, 80.0);
     EXPECT_DOUBLE_EQ(query.camera.cx_px, -5.0);
@@ -160,6 +163,7 @@ TEST_F(DesktopIo, RejectsWrongTypesAndNumericRangesWithoutTruncation) {
                                                           {"/observer/latitude_deg", 91},
                                                           {"/observer/longitude_deg", nullptr},
                                                           {"/observer/height/metres", false},
+                                                          {"/observer/simulated", "yes"},
                                                           {"/orientation/pitch_deg", "bad"},
                                                           {"/orientation", nullptr},
                                                           {"/options", nullptr},
@@ -274,6 +278,28 @@ TEST_F(DesktopIo, WriterPreservesAllStatesAndOptionalValues) {
     }
 }
 
+TEST_F(DesktopIo, VisibilityDebugWriterRecordsDatasetAndSamples) {
+    VisibilityTrace trace;
+    trace.result = {VisibilityState::VisibleInModel, 12.5, std::nullopt, 1, "fixture trace"};
+    trace.samples.push_back(
+        {0, 25.0, {{49.1, 20.1}, 1234.0}, VisibilitySampleTerrainState::Valid, 1200.0, 34.0});
+    RunMetadata metadata{"test", "fixture-v1", std::string(64, 'a'), {}, true};
+    const auto path = directory / "visibility-debug.json";
+
+    ASSERT_TRUE(std::holds_alternative<std::monostate>(
+        writeVisibilityDebugJson({{"test:peak", std::move(trace)}}, metadata, path)));
+    std::ifstream input(path);
+    const auto document = Json::parse(input);
+    EXPECT_EQ(document["schema_version"], 1);
+    EXPECT_EQ(document["metadata"]["dataset_id"], "fixture-v1");
+    EXPECT_TRUE(document["metadata"]["observer_simulated"]);
+    ASSERT_EQ(document["traces"].size(), 1U);
+    EXPECT_EQ(document["traces"][0]["peak_id"], "test:peak");
+    EXPECT_EQ(document["traces"][0]["result"]["state"], "VisibleInModel");
+    EXPECT_EQ(document["traces"][0]["samples"][0]["terrain_state"], "Valid");
+    EXPECT_DOUBLE_EQ(document["traces"][0]["samples"][0]["clearance_m"].get<double>(), 34.0);
+}
+
 TEST_F(DesktopIo, WriterReportsIoAndRejectsNonFiniteBeforeTruncation) {
     const auto io_error = writeFrameJson(referenceFrame(), referenceCatalog(), {},
                                          directory / "missing" / "result.json");
@@ -304,8 +330,8 @@ TEST_F(DesktopIo, SvgEscapesXmlKeepsPolishTextAndUsesCameraCoordinates) {
     options.background_image = directory / "photo & <test>.jpg";
     const auto path = directory / "overlay.svg";
 
-    ASSERT_TRUE(std::holds_alternative<std::monostate>(
-        writeOverlaySvg(frame, catalog, options, path)));
+    ASSERT_TRUE(
+        std::holds_alternative<std::monostate>(writeOverlaySvg(frame, catalog, options, path)));
     const auto svg = readText(path);
     EXPECT_NE(svg.find("viewBox=\"0 0 200 100\""), std::string::npos);
     EXPECT_NE(svg.find("Szczyt &amp; &lt;Turnia&gt; Żółć &quot;cytat&quot; &apos;x&apos; — 970 m"),
@@ -313,8 +339,7 @@ TEST_F(DesktopIo, SvgEscapesXmlKeepsPolishTextAndUsesCameraCoordinates) {
     EXPECT_NE(svg.find("photo &amp; &lt;test&gt;.jpg"), std::string::npos);
     EXPECT_NE(svg.find("x=\"0\" y=\"0\" width=\"200\" height=\"100\" preserveAspectRatio=\"none\""),
               std::string::npos);
-    EXPECT_NE(svg.find("data-peak-id=\"test:peak\" cx=\"198\" cy=\"2\""),
-              std::string::npos);
+    EXPECT_NE(svg.find("data-peak-id=\"test:peak\" cx=\"198\" cy=\"2\""), std::string::npos);
 }
 
 TEST_F(DesktopIo, SvgMovesCollidingLabelsButNeverTheirEdgeMarkers) {
@@ -336,8 +361,10 @@ TEST_F(DesktopIo, SvgMovesCollidingLabelsButNeverTheirEdgeMarkers) {
     ASSERT_TRUE(std::holds_alternative<std::monostate>(
         writeOverlaySvg(frame, catalog, referenceRenderOptions(), path)));
     const auto svg = readText(path);
-    const auto first_label = lineContaining(svg, "class=\"peak-label status-missing-terrain\" data-peak-id=\"edge:a\"");
-    const auto second_label = lineContaining(svg, "class=\"peak-label status-missing-terrain\" data-peak-id=\"edge:b\"");
+    const auto first_label =
+        lineContaining(svg, "class=\"peak-label status-missing-terrain\" data-peak-id=\"edge:a\"");
+    const auto second_label =
+        lineContaining(svg, "class=\"peak-label status-missing-terrain\" data-peak-id=\"edge:b\"");
     ASSERT_FALSE(first_label.empty());
     ASSERT_FALSE(second_label.empty());
     EXPECT_NE(first_label, second_label);
@@ -362,8 +389,9 @@ TEST_F(DesktopIo, SvgDistinguishesMissingTerrainAndDebugOnlyOcclusion) {
     ASSERT_TRUE(std::holds_alternative<std::monostate>(
         writeOverlaySvg(frame, catalog, referenceRenderOptions(), normal_path)));
     const auto normal = readText(normal_path);
-    EXPECT_NE(lineContaining(normal, "data-peak-id=\"test:peak\" cx=").find("status-missing-terrain"),
-              std::string::npos);
+    EXPECT_NE(
+        lineContaining(normal, "data-peak-id=\"test:peak\" cx=").find("status-missing-terrain"),
+        std::string::npos);
     EXPECT_EQ(normal.find("data-peak-id=\"test:occluded\""), std::string::npos);
 
     auto debug_options = referenceRenderOptions();
@@ -372,8 +400,9 @@ TEST_F(DesktopIo, SvgDistinguishesMissingTerrainAndDebugOnlyOcclusion) {
     ASSERT_TRUE(std::holds_alternative<std::monostate>(
         writeOverlaySvg(frame, catalog, debug_options, debug_path)));
     const auto debug = readText(debug_path);
-    EXPECT_NE(lineContaining(debug, "data-peak-id=\"test:peak\" cx=").find("status-missing-terrain"),
-              std::string::npos);
+    EXPECT_NE(
+        lineContaining(debug, "data-peak-id=\"test:peak\" cx=").find("status-missing-terrain"),
+        std::string::npos);
     EXPECT_NE(lineContaining(debug, "data-peak-id=\"test:occluded\" cx=").find("status-occluded"),
               std::string::npos);
     EXPECT_NE(debug.find("data-debug=\"true\""), std::string::npos);
@@ -383,13 +412,15 @@ TEST_F(DesktopIo, SvgRejectsInvalidInputBeforeTruncatingAndReportsIo) {
     const auto path = write("keep existing data");
     auto invalid_options = referenceRenderOptions();
     invalid_options.camera.width_px = 0;
-    const auto invalid = writeOverlaySvg(referenceFrame(), referenceCatalog(), invalid_options, path);
+    const auto invalid =
+        writeOverlaySvg(referenceFrame(), referenceCatalog(), invalid_options, path);
     ASSERT_TRUE(std::holds_alternative<Error>(invalid));
     EXPECT_EQ(std::get<Error>(invalid).code, ErrorCode::InvalidInput);
     EXPECT_EQ(readText(path), "keep existing data");
 
-    const auto io_error = writeOverlaySvg(referenceFrame(), referenceCatalog(),
-                                          referenceRenderOptions(), directory / "missing" / "x.svg");
+    const auto io_error =
+        writeOverlaySvg(referenceFrame(), referenceCatalog(), referenceRenderOptions(),
+                        directory / "missing" / "x.svg");
     ASSERT_TRUE(std::holds_alternative<Error>(io_error));
     EXPECT_EQ(std::get<Error>(io_error).code, ErrorCode::IoFailure);
 }

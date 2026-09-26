@@ -36,10 +36,9 @@ std::optional<std::string> validateVisibilityOptions(const VisibilityOptions& op
     return std::nullopt;
 }
 
-} // namespace
-
-VisibilityResult traceVisibility(const Observer& observer, const Peak& peak,
-                                 const ITerrain& terrain, const VisibilityOptions& options) {
+VisibilityResult traceVisibilityImpl(const Observer& observer, const Peak& peak,
+                                     const ITerrain& terrain, const VisibilityOptions& options,
+                                     std::vector<VisibilityDebugSample>* debug_samples) {
     if (const auto error = validateVisibilityOptions(options)) {
         return uncertainResult("invalid visibility options: " + *error);
     }
@@ -151,6 +150,17 @@ VisibilityResult traceVisibility(const Observer& observer, const Peak& peak,
         const HeightResult terrain_height = terrain.sampleHeight(ray_position.coord);
         const auto* height_sample = std::get_if<HeightSample>(&terrain_height);
         if (height_sample == nullptr || !std::isfinite(height_sample->ellipsoid_height_m)) {
+            if (debug_samples) {
+                VisibilitySampleTerrainState state = VisibilitySampleTerrainState::NonFinite;
+                if (height_sample == nullptr) {
+                    state = std::get<TerrainSampleError>(terrain_height) ==
+                                    TerrainSampleError::OutsideCoverage
+                                ? VisibilitySampleTerrainState::OutsideCoverage
+                                : VisibilitySampleTerrainState::NoData;
+                }
+                debug_samples->push_back({sample_index, distance_from_observer_m, ray_position,
+                                          state, std::nullopt, std::nullopt});
+            }
             if (!missing_terrain) {
                 if (height_sample != nullptr) {
                     missing_reason = "terrain returned a non-finite height along the line of sight";
@@ -167,6 +177,12 @@ VisibilityResult traceVisibility(const Observer& observer, const Peak& peak,
 
         const double clearance_m =
             ray_position.ellipsoid_height_m - height_sample->ellipsoid_height_m;
+        if (debug_samples) {
+            debug_samples->push_back(
+                {sample_index, distance_from_observer_m, ray_position,
+                 VisibilitySampleTerrainState::Valid, height_sample->ellipsoid_height_m,
+                 std::isfinite(clearance_m) ? std::optional<double>{clearance_m} : std::nullopt});
+        }
         if (!std::isfinite(clearance_m)) {
             return VisibilityResult{VisibilityState::Uncertain, result.min_sampled_clearance_m,
                                     std::nullopt, result.sample_count,
@@ -200,5 +216,19 @@ VisibilityResult traceVisibility(const Observer& observer, const Peak& peak,
 
     result.reason = "all sampled terrain clearances exceed the clearance band";
     return result;
+}
+
+} // namespace
+
+VisibilityResult traceVisibility(const Observer& observer, const Peak& peak,
+                                 const ITerrain& terrain, const VisibilityOptions& options) {
+    return traceVisibilityImpl(observer, peak, terrain, options, nullptr);
+}
+
+VisibilityTrace traceVisibilityDebug(const Observer& observer, const Peak& peak,
+                                     const ITerrain& terrain, const VisibilityOptions& options) {
+    VisibilityTrace trace;
+    trace.result = traceVisibilityImpl(observer, peak, terrain, options, &trace.samples);
+    return trace;
 }
 } // namespace tatra

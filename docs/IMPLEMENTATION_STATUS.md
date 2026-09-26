@@ -1,21 +1,21 @@
-**Stan repozytorium: szkielet do realizacji MVP.**
+**Stan repozytorium: działający zakres T01–T17.**
 
 | Zakres | Stan |
 |---|---|
-| T01: CMake, C++20, przypięte zależności, presety | Przygotowane |
-| Konwersja stopni/radianów i testy startowe | Zaimplementowane |
-| Typy i deklaracje API T02–T17 | Przygotowane |
-| Pomoc i wersja CLI | Zaimplementowane |
-| T02–T07: walidacja, geometria, teren, silnik | Do implementacji |
-| T08–T14: pliki, SVG, dane i rzeczywiste sceny | Do implementacji |
-| T15–T18: interpolacja, replay i ewaluacja | Do implementacji |
+| T01: CMake, C++20, przypięte zależności, presety | Zaimplementowane |
+| T02–T07: walidacja, geometria, teren, widoczność i silnik | Zaimplementowane |
+| T08–T09: scena JSON, wynik i SVG | Zaimplementowane |
+| T10–T13: dane, DEM, katalog i walidowany pakiet | Zaimplementowane |
+| T14: symulowane sceny na rzeczywistym terenie | Zaimplementowane |
+| T15: interpolacja orientacji na osi czasu | Zaimplementowane |
+| T16: deterministyczny replay sesji | Zaimplementowane |
+| T17: metryki błędu reprojekcji | Zaimplementowane |
+| T18: zestaw fotograficzny i raport jakości | Do implementacji |
 | T19: benchmarki | Zaplanowane; brak pozornych pomiarów placeholderów |
 | T20: CI i finalne demo | Konfiguracja CI gotowa; demo wymaga algorytmów i danych |
 
-TODO(Txx) i błędy NotImplemented wskazują zadania z [listy](MVP_TASKS.md).
-Przejście testów startowych potwierdza spójność szkieletu, nie poprawność przyszłych
-algorytmów ani dokładność rozpoznawania szczytów. Test szkieletu należy zastąpić
-rzeczywistą sceną integracyjną w T07.
+Test T14 potwierdza powtarzalność pipeline na konkretnym pakiecie, lecz pozycja
+obserwatora pozostaje symulowana. Ocena dokładności wobec fotografii należy do T18.
 
 CI buduje rdzeń na Linuxie i Windowsie. Linux obejmuje Debug, Release i ASan/UBSan.
 Adaptery desktopowe wymagają GDAL i mają osobny preset do lokalnego sprawdzenia.

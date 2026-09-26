@@ -6,13 +6,19 @@
     "height": {
       "mode": "above_dem",
       "metres": 2.0
-    }
+    },
+    "simulated": true
   },
   "camera": {
     "width_px": 1280,
     "height_px": 720,
     "horizontal_fov_deg": 60.0
   },
+  "options": {
+    "min_range_m": 500.0,
+    "max_range_m": 30000.0
+  },
+  "max_gap_ns": 1000000000,
   "poses_file": "poses.json",
   "frames_file": "frames.json"
 }

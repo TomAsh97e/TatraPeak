@@ -14,7 +14,9 @@ file(READ "${TEST_DIR}/success/overlay.svg" overlay)
 string(JSON version GET "${result}" schema_version)
 string(JSON count LENGTH "${result}" observations)
 string(JSON warning GET "${result}" warnings 0 code)
-if(NOT version EQUAL 1 OR NOT count EQUAL 5 OR NOT warning STREQUAL "MissingTerrain")
+string(JSON simulated GET "${result}" metadata observer_simulated)
+if(NOT version EQUAL 1 OR NOT count EQUAL 5 OR NOT warning STREQUAL "MissingTerrain" OR
+   NOT simulated)
     message(FATAL_ERROR "Unexpected synthetic scene output: ${result}")
 endif()
 set(expected_ids test:behind test:missing test:occluded test:outside test:visible)
@@ -50,6 +52,24 @@ file(WRITE "${TEST_DIR}/invalid.json" "{not JSON")
 run_expect(2 render --dataset synthetic --scene "${TEST_DIR}/invalid.json" --out "${TEST_DIR}/invalid")
 file(WRITE "${TEST_DIR}/blocked" "regular file, not a directory")
 run_expect(3 render --dataset synthetic --scene "${SCENE}" --out "${TEST_DIR}/blocked")
-run_expect(2 render --dataset real-data --scene "${SCENE}" --out "${TEST_DIR}/unsupported")
+run_expect(3 render --dataset "${TEST_DIR}/missing-dataset" --scene "${SCENE}" --out "${TEST_DIR}/missing-dataset-output")
 run_expect(2 render --dataset synthetic --scene "${SCENE}")
 run_expect(2 render --dataset synthetic --scene "${SCENE}" --out "${TEST_DIR}/duplicate" --scene "${SCENE}")
+
+run_expect(0 render --dataset synthetic --scene "${SCENE}" --out "${TEST_DIR}/debug"
+    --debug-peak test:visible --debug-peak test:missing)
+file(READ "${TEST_DIR}/debug/visibility-debug.json" debug)
+string(JSON debug_dataset GET "${debug}" metadata dataset_id)
+string(JSON trace_count LENGTH "${debug}" traces)
+string(JSON first_id GET "${debug}" traces 0 peak_id)
+string(JSON second_id GET "${debug}" traces 1 peak_id)
+string(JSON first_samples LENGTH "${debug}" traces 0 samples)
+if(NOT debug_dataset STREQUAL "synthetic-v1" OR NOT trace_count EQUAL 2 OR
+   NOT first_id STREQUAL "test:missing" OR NOT second_id STREQUAL "test:visible" OR
+   first_samples LESS_EQUAL 0)
+    message(FATAL_ERROR "Unexpected visibility debug output: ${debug}")
+endif()
+run_expect(2 render --dataset synthetic --scene "${SCENE}" --out "${TEST_DIR}/bad-debug"
+    --debug-peak absent)
+run_expect(2 render --dataset synthetic --scene "${SCENE}" --out "${TEST_DIR}/duplicate-debug"
+    --debug-peak test:visible --debug-peak test:visible)

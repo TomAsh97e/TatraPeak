@@ -1,5 +1,6 @@
-add_executable(tatra_tests unit/angles_test.cpp integration/scaffold_test.cpp)
-target_link_libraries(tatra_tests PRIVATE TatraPeak::core GTest::gtest_main)
+add_executable(tatra_tests unit/angles_test.cpp unit/pose_timeline_test.cpp
+    unit/reprojection_metrics_test.cpp integration/scaffold_test.cpp)
+target_link_libraries(tatra_tests PRIVATE TatraPeak::core TatraPeak::evaluation GTest::gtest_main)
 tatra_configure_target(tatra_tests)
 
 include(GoogleTest)
@@ -16,11 +17,50 @@ if(TATRA_BUILD_DESKTOP_IO)
         TATRA_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/t08")
     tatra_configure_target(tatra_io_tests)
     gtest_discover_tests(tatra_io_tests DISCOVERY_MODE PRE_TEST)
+
+    add_executable(tatra_dem_tests integration/geotiff_test.cpp)
+    target_link_libraries(tatra_dem_tests PRIVATE TatraPeak::io GTest::gtest_main GDAL::GDAL)
+    tatra_configure_target(tatra_dem_tests)
+    gtest_discover_tests(tatra_dem_tests DISCOVERY_MODE PRE_TEST)
+
+    add_executable(tatra_peak_import_tests integration/osm_peak_importer_test.cpp)
+    target_link_libraries(tatra_peak_import_tests PRIVATE TatraPeak::io GTest::gtest_main
+        nlohmann_json::nlohmann_json)
+    tatra_configure_target(tatra_peak_import_tests)
+    gtest_discover_tests(tatra_peak_import_tests DISCOVERY_MODE PRE_TEST)
+
+    add_executable(tatra_dataset_tests integration/dataset_loader_test.cpp)
+    target_link_libraries(tatra_dataset_tests PRIVATE TatraPeak::io GTest::gtest_main
+        GDAL::GDAL nlohmann_json::nlohmann_json)
+    target_include_directories(tatra_dataset_tests PRIVATE
+        "${PROJECT_SOURCE_DIR}/adapters/desktop")
+    tatra_configure_target(tatra_dataset_tests)
+    gtest_discover_tests(tatra_dataset_tests DISCOVERY_MODE PRE_TEST)
+
+    add_executable(tatra_session_tests integration/session_loader_test.cpp)
+    target_link_libraries(tatra_session_tests PRIVATE TatraPeak::io GTest::gtest_main
+        nlohmann_json::nlohmann_json)
+    tatra_configure_target(tatra_session_tests)
+    gtest_discover_tests(tatra_session_tests DISCOVERY_MODE PRE_TEST)
+
     add_test(NAME cli.render.synthetic COMMAND ${CMAKE_COMMAND}
         "-DTATRA_EXE=$<TARGET_FILE:tatra>"
         "-DSCENE=${PROJECT_SOURCE_DIR}/examples/synthetic-scene.json"
         "-DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli-render"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/integration/cli_render_test.cmake")
+    add_test(NAME cli.replay.synthetic COMMAND ${CMAKE_COMMAND}
+        "-DTATRA_EXE=$<TARGET_FILE:tatra>"
+        "-DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli-replay"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/integration/cli_replay_test.cmake")
+    if(TATRA_REAL_DATASET_DIR)
+        add_test(NAME cli.render.tatras-v1 COMMAND ${CMAKE_COMMAND}
+            "-DTATRA_EXE=$<TARGET_FILE:tatra>"
+            "-DDATASET=${TATRA_REAL_DATASET_DIR}"
+            "-DSCENE_DIR=${PROJECT_SOURCE_DIR}/examples/tatras-v1"
+            "-DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/t14-real-data"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/integration/t14_real_dataset_test.cmake")
+        set_tests_properties(cli.render.tatras-v1 PROPERTIES LABELS real-data)
+    endif()
 endif()
 
 # Compile each public header in isolation to catch hidden include dependencies.

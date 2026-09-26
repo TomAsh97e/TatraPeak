@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "description": "Jawne poprawki do wybranych rekordów OSM. Lista jest pusta po kontroli danych T10; przyszłe zmiany wymagają pola note.",
+  "corrections": []
+}

@@ -92,6 +92,31 @@ TEST(Engine, FivePeakSceneChecksStatusesAndTerrainCallBudget) {
     EXPECT_EQ(std::get<FrameResult>(skipped_result).diagnostics.visibility_sample_count, 0U);
 }
 
+TEST(Visibility, DebugTracePreservesResultAndRecordsInteriorSamples) {
+    SceneTerrain terrain;
+    const auto observer = validQuery().observer;
+    const auto peak = peakAt("visible", 0.01, 0.0);
+    VisibilityOptions options;
+    options.sample_step_m = 100.0;
+
+    const auto debug = traceVisibilityDebug(observer, peak, terrain, options);
+    const auto regular = traceVisibility(observer, peak, terrain, options);
+
+    EXPECT_EQ(debug.result.state, regular.state);
+    EXPECT_EQ(debug.result.sample_count, regular.sample_count);
+    ASSERT_EQ(debug.samples.size(), debug.result.sample_count);
+    ASSERT_FALSE(debug.samples.empty());
+    for (std::size_t index = 0; index < debug.samples.size(); ++index) {
+        const auto& sample = debug.samples[index];
+        EXPECT_EQ(sample.index, index);
+        EXPECT_EQ(sample.terrain_state, VisibilitySampleTerrainState::Valid);
+        ASSERT_TRUE(sample.terrain_ellipsoid_height_m);
+        ASSERT_TRUE(sample.clearance_m);
+        EXPECT_DOUBLE_EQ(*sample.terrain_ellipsoid_height_m, 0.0);
+        EXPECT_GT(sample.distance_from_observer_m, 0.0);
+    }
+}
+
 TEST(Engine, FiltersRangeBeforeDirectionProjectionAndTerrainAccess) {
     SceneTerrain terrain;
     const PeakCatalog catalog{

@@ -13,8 +13,13 @@ using Timestamp = std::chrono::nanoseconds;
 using PeakId = std::string;
 
 enum class ErrorCode {
-    InvalidInput, UnsupportedFormat, IoFailure, CorruptData,
-    TimeOutsideSession, TimeGapTooLarge, NotImplemented
+    InvalidInput,
+    UnsupportedFormat,
+    IoFailure,
+    CorruptData,
+    TimeOutsideSession,
+    TimeGapTooLarge,
+    NotImplemented
 };
 
 struct Error {
@@ -22,8 +27,7 @@ struct Error {
     std::string message;
 };
 
-template<class T>
-using Result = std::variant<T, Error>;
+template <class T> using Result = std::variant<T, Error>;
 using Status = Result<std::monostate>;
 
 struct GeoCoord {
@@ -37,9 +41,16 @@ struct GeoPosition {
     double ellipsoid_height_m = 0.0;
 };
 
-struct EcefPoint { Eigen::Vector3d value_m = Eigen::Vector3d::Zero(); };
-struct EnuPoint { Eigen::Vector3d value_m = Eigen::Vector3d::Zero(); };
-struct PixelPoint { double u = 0.0; double v = 0.0; };
+struct EcefPoint {
+    Eigen::Vector3d value_m = Eigen::Vector3d::Zero();
+};
+struct EnuPoint {
+    Eigen::Vector3d value_m = Eigen::Vector3d::Zero();
+};
+struct PixelPoint {
+    double u = 0.0;
+    double v = 0.0;
+};
 
 struct CameraIntrinsics {
     int width_px = 0;
@@ -72,6 +83,10 @@ struct Peak {
     std::optional<CatalogElevation> display_elevation;
 };
 
-struct Observer { GeoPosition position; };
+struct Observer {
+    GeoPosition position;
+    // True for a virtual viewpoint that is not a surveyed camera position.
+    bool simulated = false;
+};
 
 } // namespace tatra

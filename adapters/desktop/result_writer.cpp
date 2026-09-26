@@ -4,6 +4,7 @@
 #include <tatra/desktop/io.hpp>
 #include <tatra/validation.hpp>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace tatra::desktop {
@@ -40,6 +41,19 @@ const char* stateName(VisibilityState state) {
         return "MissingTerrain";
     }
     throw Error{ErrorCode::InvalidInput, "Unknown visibility state"};
+}
+const char* stateName(VisibilitySampleTerrainState state) {
+    switch (state) {
+    case VisibilitySampleTerrainState::Valid:
+        return "Valid";
+    case VisibilitySampleTerrainState::OutsideCoverage:
+        return "OutsideCoverage";
+    case VisibilitySampleTerrainState::NoData:
+        return "NoData";
+    case VisibilitySampleTerrainState::NonFinite:
+        return "NonFinite";
+    }
+    throw Error{ErrorCode::InvalidInput, "Unknown visibility sample terrain state"};
 }
 } // namespace
 
@@ -79,6 +93,8 @@ Status writeFrameJson(const FrameResult& frame, const PeakCatalog& catalog,
                            {"visibility_sample_count", frame.diagnostics.visibility_sample_count}}},
                          {"observations", Json::array()},
                          {"warnings", Json::array()}};
+        if (metadata.observer_simulated)
+            document["metadata"]["observer_simulated"] = true;
         bool missing_terrain = false;
         for (const auto& observation : frame.observations) {
             const auto found = peaks.find(observation.id);
@@ -159,6 +175,67 @@ Status writeFrameJson(const FrameResult& frame, const PeakCatalog& catalog,
                      "Cannot serialize result JSON: " + std::string{error.what()}};
     } catch (const std::ios_base::failure& error) {
         return Error{ErrorCode::IoFailure, "Cannot write result: " + std::string{error.what()}};
+    }
+}
+
+Status writeVisibilityDebugJson(const std::vector<VisibilityDebugRecord>& records,
+                                const RunMetadata& metadata, const std::filesystem::path& output) {
+    try {
+        const auto valid_options = validateOptions(metadata.options);
+        if (const auto* error = std::get_if<Error>(&valid_options))
+            return *error;
+        std::unordered_set<PeakId> ids;
+        Json document = {{"schema_version", 1},
+                         {"metadata",
+                          {{"program_version", metadata.program_version},
+                           {"dataset_id", metadata.dataset_id},
+                           {"dataset_sha256", metadata.dataset_sha256},
+                           {"observer_simulated", metadata.observer_simulated}}},
+                         {"traces", Json::array()}};
+        for (const auto& record : records) {
+            if (record.peak_id.empty() || !ids.insert(record.peak_id).second)
+                return Error{ErrorCode::InvalidInput,
+                             "Visibility debug peak ids must be non-empty and unique"};
+            const auto& result = record.trace.result;
+            Json trace = {
+                {"peak_id", record.peak_id},
+                {"result",
+                 {{"state", stateName(result.state)},
+                  {"min_sampled_clearance_m", optionalNumber(result.min_sampled_clearance_m)},
+                  {"first_blocker_distance_m", optionalNumber(result.first_blocker_distance_m)},
+                  {"sample_count", result.sample_count},
+                  {"reason", result.reason}}},
+                {"samples", Json::array()}};
+            for (const auto& sample : record.trace.samples) {
+                trace["samples"].push_back(
+                    {{"index", sample.index},
+                     {"distance_from_observer_m", finite(sample.distance_from_observer_m)},
+                     {"ray_position",
+                      {{"latitude_deg", finite(sample.ray_position.coord.latitude_deg)},
+                       {"longitude_deg", finite(sample.ray_position.coord.longitude_deg)},
+                       {"ellipsoid_height_m", finite(sample.ray_position.ellipsoid_height_m)}}},
+                     {"terrain_state", stateName(sample.terrain_state)},
+                     {"terrain_ellipsoid_height_m",
+                      optionalNumber(sample.terrain_ellipsoid_height_m)},
+                     {"clearance_m", optionalNumber(sample.clearance_m)}});
+            }
+            document["traces"].push_back(std::move(trace));
+        }
+        const auto serialized = document.dump(2) + '\n';
+        std::ofstream stream;
+        stream.exceptions(std::ios::failbit | std::ios::badbit);
+        stream.open(output, std::ios::binary | std::ios::trunc);
+        stream << serialized;
+        stream.close();
+        return std::monostate{};
+    } catch (const Error& error) {
+        return error;
+    } catch (const Json::exception& error) {
+        return Error{ErrorCode::InvalidInput,
+                     "Cannot serialize visibility debug JSON: " + std::string{error.what()}};
+    } catch (const std::ios_base::failure& error) {
+        return Error{ErrorCode::IoFailure,
+                     "Cannot write visibility debug data: " + std::string{error.what()}};
     }
 }
 } // namespace tatra::desktop

@@ -94,7 +94,7 @@ Result<FrameQuery> loadScene(const std::filesystem::path& file, const ITerrain& 
                     static_cast<std::uint64_t>(std::numeric_limits<Timestamp::rep>::max()),
                     "timestamp_ns"))};
         const auto& observer = document.at("observer");
-        object(observer, {"latitude_deg", "longitude_deg", "height"}, "observer");
+        object(observer, {"latitude_deg", "longitude_deg", "height", "simulated"}, "observer");
         const auto coord =
             checked(makeGeoCoord(number(observer.at("latitude_deg"), "latitude_deg"),
                                  number(observer.at("longitude_deg"), "longitude_deg")));
@@ -115,6 +115,11 @@ Result<FrameQuery> loadScene(const std::filesystem::path& file, const ITerrain& 
             return Error{ErrorCode::UnsupportedFormat, "Unsupported height.mode: " + mode};
         }
         query.observer.position = checked(makeGeoPosition(coord, metres));
+        if (observer.contains("simulated")) {
+            if (!observer.at("simulated").is_boolean())
+                return Error{ErrorCode::InvalidInput, "observer.simulated must be a boolean"};
+            query.observer.simulated = observer.at("simulated").get<bool>();
+        }
 
         const auto& camera = document.at("camera");
         object(camera,

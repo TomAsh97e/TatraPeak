@@ -577,7 +577,8 @@ Scenę można opisać tak:
   "observer": {
     "latitude_deg": 49.30,
     "longitude_deg": 19.98,
-    "height": { "mode": "above_dem", "metres": 2.0 }
+    "height": { "mode": "above_dem", "metres": 2.0 },
+    "simulated": true
   },
   "camera": {
     "width_px": 1280,
@@ -596,7 +597,10 @@ Scenę można opisać tak:
 }
 ~~~
 
-To ilustracyjna wirtualna scena, a nie zweryfikowane stanowisko fotograficzne. Dla prawdziwego zdjęcia należy zapisać rzeczywiste lub jawnie oszacowane współrzędne, intrinsics i orientację. Alternatywą dla above_dem jest ellipsoid z wartością bezpośrednią; nie dopuszczaj obu naraz.
+To ilustracyjna wirtualna scena, a nie zweryfikowane stanowisko fotograficzne, co
+zapisuje jawne `observer.simulated=true`. Dla prawdziwego zdjęcia należy zapisać
+rzeczywiste lub jawnie oszacowane współrzędne, intrinsics i orientację. Alternatywą
+dla above_dem jest ellipsoid z wartością bezpośrednią; nie dopuszczaj obu naraz.
 
 **Dane dla Tatr przygotuj w następującej kolejności.**
 

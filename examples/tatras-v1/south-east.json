@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "timestamp_ns": 1,
+  "observer": {
+    "latitude_deg": 49.3,
+    "longitude_deg": 19.98,
+    "height": {"mode": "above_dem", "metres": 2.0},
+    "simulated": true
+  },
+  "camera": {"width_px": 1280, "height_px": 720, "horizontal_fov_deg": 60.0},
+  "orientation": {"heading_deg": 135.0, "pitch_deg": 5.0, "roll_deg": 0.0},
+  "options": {"min_range_m": 500.0, "max_range_m": 30000.0}
+}

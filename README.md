@@ -1,8 +1,9 @@
 **TatraPeak** to niezależny od platformy projekt C++20 do geometrycznej identyfikacji szczytów górskich. Pierwszy obszar danych: Tatry po obu stronach granicy.
 
-Repozytorium jest obecnie kompilowalnym szkieletem do nauki i realizacji MVP.
-Działa konfiguracja CMake, biblioteka, testy startowe oraz pomoc/version CLI.
-Algorytmy, parsery, renderowanie i przygotowanie danych czekają na implementację.
+Zaimplementowany zakres T01–T17 obejmuje geometrię, kamerę, teren, widoczność,
+silnik, JSON/SVG, przygotowanie i walidację danych oraz pierwsze symulowane widoki
+na rzeczywistym pakiecie Tatr, interpolację orientacji, deterministyczny replay i
+metryki reprojekcji. T18–T20 pozostają kolejnymi etapami MVP.
 
 - [Architektura i kontrakty C++](docs/MVP_PLAN.md)
 - [Zadania T01–T20 z testami odbiorowymi](docs/MVP_TASKS.md)
@@ -22,8 +23,8 @@ ctest --preset debug
 
 Dostępne presety: debug, release, asan (GCC/Clang na Unix) i desktop-debug.
 Preset desktop-debug dodatkowo wymaga zainstalowanej biblioteki GDAL z plikami
-nagłówkowymi; nlohmann/json jest pobierane przez CMake. Włączenie adapterów
-sprawdza ich kompilację, nie implementuje jeszcze odczytu danych.
+nagłówkowymi; nlohmann/json jest pobierane przez CMake. Adaptery obsługują sceny,
+GeoTIFF, katalog OSM, manifest pakietu, wynik JSON i wizualizację SVG.
 
 ~~~sh
 cmake --preset asan
@@ -56,15 +57,21 @@ Target tatra_core nie zależy od SDK telefonu, GDAL ani JSON. Adaptery są osobn
 domyślnie wyłączoną biblioteką tatra_io. Silnik otrzymuje teren i katalog przez
 const referencje; właściciel danych musi przeżyć silnik.
 
-W szkielecie funkcje zwracające Result zgłaszają ErrorCode::NotImplemented.
-Pozostałe niewdrożone operacje rzucają std::logic_error z numerem zadania.
-Nie zwracają fikcyjnych poprawnych wyników. Ten mechanizm jest tymczasowy;
-przy implementacji zastąp go kontraktem odpowiedniego zadania i usuń test
-Scaffold.UnfinishedEngineDoesNotReportSuccessfulAnalysis po wdrożeniu T07.
+Pierwsze demo na rzeczywistym pakiecie opisuje
+[docs/T14_DEMO.md](docs/T14_DEMO.md). Po przygotowaniu danych pojedyncze polecenie
+`tatra render` zapisuje `result.json` i `overlay.svg`.
 
-Zacznij od T02: walidacji typów w src/validation.cpp. Potem zaimplementuj T03
-(geodezję) i T04 (kamerę) wraz z niezależnymi testami liczbowymi. T01 ma już
-infrastrukturę i działający przykład degreesToRadians/radiansToDegrees.
+Replay sesji oraz generator kontrolowanego obrotu opisuje
+[docs/T16_REPLAY.md](docs/T16_REPLAY.md). Najkrótsza próba bez danych Tatr:
+
+~~~sh
+./build/desktop-debug/tatra generate-session --out out/session-control
+./build/desktop-debug/tatra replay \
+  --dataset synthetic --session out/session-control --out out/replay-control
+~~~
+
+Kontrakt metryk, w tym jawne liczenie braków i predykcji spoza obrazu, opisuje
+[docs/T17_METRICS.md](docs/T17_METRICS.md).
 
 Zdjęcia, DEM i katalog szczytów nie są dołączone. Pozyskiwanie i warunki użycia
 danych opisuje plan. Wartości w examples/ są syntetyczne lub demonstracyjne.
