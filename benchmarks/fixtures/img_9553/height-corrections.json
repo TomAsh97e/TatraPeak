@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "corrections": [
+    {
+      "id": "osm:node:615589377",
+      "geometry_height_correction": {
+        "ellipsoid_height_m": 2480.8172,
+        "source": "Local OSM snapshot data/raw/osm/tatras-peaks.json SHA256=a08b4a1ee43bd65aa55d9e6291a3cee52991ab7cc094b18fc5996d863d10f08f; osm:node:615589377 ele=2438.0; EGM2008 geoid N=42.8172; h=H+N"
+      },
+      "note": "Photo sensitivity trial: OSM ele vertical datum unspecified, assumed EGM2008-compatible. Not a surveyed reference. Original summit coordinates unchanged."
+    },
+    {
+      "id": "osm:node:321624997",
+      "geometry_height_correction": {
+        "ellipsoid_height_m": 2418.8229,
+        "source": "Local OSM snapshot data/raw/osm/tatras-peaks.json SHA256=a08b4a1ee43bd65aa55d9e6291a3cee52991ab7cc094b18fc5996d863d10f08f; osm:node:321624997 ele=2376.0; EGM2008 geoid N=42.8229; h=H+N"
+      },
+      "note": "Photo sensitivity trial: OSM ele vertical datum unspecified, assumed EGM2008-compatible. Not a surveyed reference. Original summit coordinates unchanged."
+    },
+    {
+      "id": "osm:node:385103809",
+      "geometry_height_correction": {
+        "ellipsoid_height_m": 2452.8136,
+        "source": "Local OSM snapshot data/raw/osm/tatras-peaks.json SHA256=a08b4a1ee43bd65aa55d9e6291a3cee52991ab7cc094b18fc5996d863d10f08f; osm:node:385103809 ele=2410.0; EGM2008 geoid N=42.8136; h=H+N"
+      },
+      "note": "Photo sensitivity trial: OSM ele vertical datum unspecified, assumed EGM2008-compatible. Not a surveyed reference. Original summit coordinates unchanged."
+    },
+    {
+      "id": "osm:node:9991444350",
+      "geometry_height_correction": {
+        "ellipsoid_height_m": 2431.8181,
+        "source": "Local OSM snapshot data/raw/osm/tatras-peaks.json SHA256=a08b4a1ee43bd65aa55d9e6291a3cee52991ab7cc094b18fc5996d863d10f08f; osm:node:9991444350 ele=2389.0; EGM2008 geoid N=42.8181; h=H+N"
+      },
+      "note": "Photo sensitivity trial: OSM ele vertical datum unspecified, assumed EGM2008-compatible. Not a surveyed reference. Original summit coordinates unchanged."
+    },
+    {
+      "id": "osm:node:605282386",
+      "geometry_height_correction": {
+        "ellipsoid_height_m": 2110.8089,
+        "source": "Local OSM snapshot data/raw/osm/tatras-peaks.json SHA256=a08b4a1ee43bd65aa55d9e6291a3cee52991ab7cc094b18fc5996d863d10f08f; osm:node:605282386 ele=2068.0; EGM2008 geoid N=42.8089; h=H+N"
+      },
+      "note": "Photo sensitivity trial: OSM ele vertical datum unspecified, assumed EGM2008-compatible. Not a surveyed reference. Original summit coordinates unchanged."
+    }
+  ]
+}

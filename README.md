@@ -3,7 +3,9 @@
 Zaimplementowany zakres T01–T17 obejmuje geometrię, kamerę, teren, widoczność,
 silnik, JSON/SVG, przygotowanie i walidację danych oraz pierwsze symulowane widoki
 na rzeczywistym pakiecie Tatr, interpolację orientacji, deterministyczny replay i
-metryki reprojekcji. T18–T20 pozostają kolejnymi etapami MVP.
+metryki reprojekcji. T19 dodaje benchmarki oraz raport IMG_9553.
+T18 ma lokalne próby zdjęciowe, ale wymaga domknięcia walidacji; T20 pozostaje
+kolejnym etapem MVP.
 
 - [Architektura i kontrakty C++](docs/MVP_PLAN.md)
 - [Zadania T01–T20 z testami odbiorowymi](docs/MVP_TASKS.md)
@@ -21,7 +23,8 @@ ctest --preset debug
 ./build/debug/tatra --help
 ~~~
 
-Dostępne presety: debug, release, asan (GCC/Clang na Unix) i desktop-debug.
+Dostępne presety: debug, release, asan (GCC/Clang na Unix), desktop-debug
+i desktop-release (z benchmarkami T19).
 Preset desktop-debug dodatkowo wymaga zainstalowanej biblioteki GDAL z plikami
 nagłówkowymi; nlohmann/json jest pobierane przez CMake. Adaptery obsługują sceny,
 GeoTIFF, katalog OSM, manifest pakietu, wynik JSON i wizualizację SVG.
@@ -47,7 +50,7 @@ apps/tatra/           program analizy scen i replay
 apps/prepare/         narzędzie przygotowania danych
 tools/evaluation/     pomiar błędu projekcji
 tests/                testy startowe i miejsce na fixture
-benchmarks/           miejsce na pomiary po T19
+benchmarks/           benchmarki, fixture IMG_9553 i raporty T19
 examples/             przykładowe dane sceny i syntetycznej sesji
 docs/                 szczegółowy plan i status
 data/                 lokalne dane; ignorowane przez Git
@@ -72,6 +75,10 @@ Replay sesji oraz generator kontrolowanego obrotu opisuje
 
 Kontrakt metryk, w tym jawne liczenie braków i predykcji spoza obrazu, opisuje
 [docs/T17_METRICS.md](docs/T17_METRICS.md).
+
+Instrukcja pomiarów: [benchmarks/README.md](benchmarks/README.md).
+Wyniki czasu, pamięci i zgodności po optymalizacji:
+[docs/T19_PERFORMANCE.md](docs/T19_PERFORMANCE.md).
 
 Zdjęcia, DEM i katalog szczytów nie są dołączone. Pozyskiwanie i warunki użycia
 danych opisuje plan. Wartości w examples/ są syntetyczne lub demonstracyjne.

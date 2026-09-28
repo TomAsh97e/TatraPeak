@@ -1,0 +1,5 @@
+#pragma once
+inline constexpr auto benchmarkBuildType = "@CMAKE_BUILD_TYPE@";
+inline constexpr auto benchmarkCompiler = "@CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@";
+inline constexpr auto benchmarkFlags = R"flags(@bench_flags@)flags";
+inline constexpr auto benchmarkRevision = "@bench_revision@";

@@ -3,6 +3,7 @@ project(TatraPeak VERSION 0.1.0 LANGUAGES CXX)
 
 option(TATRA_BUILD_TESTS "Build TatraPeak tests" ON)
 option(TATRA_BUILD_DESKTOP_IO "Build desktop adapters (requires GDAL)" OFF)
+option(TATRA_BUILD_BENCHMARKS "Build the standalone T19 benchmark runner" OFF)
 option(TATRA_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 set(TATRA_REAL_DATASET_DIR "" CACHE PATH "Optional validated dataset used by real-data tests")
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -61,4 +62,11 @@ target_compile_definitions(tatra-prepare PRIVATE
 
 if(TATRA_BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+if(TATRA_BUILD_BENCHMARKS)
+    if(NOT TATRA_BUILD_DESKTOP_IO)
+        message(FATAL_ERROR "TATRA_BUILD_BENCHMARKS requires TATRA_BUILD_DESKTOP_IO=ON")
+    endif()
+    add_subdirectory(benchmarks)
 endif()

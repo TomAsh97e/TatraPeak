@@ -1,4 +1,4 @@
-add_executable(tatra_tests unit/angles_test.cpp unit/pose_timeline_test.cpp
+add_executable(tatra_tests unit/angles_test.cpp unit/terrain_test.cpp unit/pose_timeline_test.cpp
     unit/reprojection_metrics_test.cpp integration/scaffold_test.cpp)
 target_link_libraries(tatra_tests PRIVATE TatraPeak::core TatraPeak::evaluation GTest::gtest_main)
 tatra_configure_target(tatra_tests)

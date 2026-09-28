@@ -43,6 +43,11 @@ class GridTerrain final : public ITerrain {
     GridTerrain(GridGeometry geometry, std::vector<float> heights_ellipsoid_m,
                 std::vector<std::uint8_t> valid_mask);
     GridGeometry geometry_;
+    // Immutable grid extents, computed once with the same arithmetic as sampling.
+    double max_row_;
+    double max_column_;
+    double last_latitude_deg_;
+    double last_longitude_deg_;
     std::vector<float> heights_ellipsoid_m_;
     std::vector<std::uint8_t> valid_mask_;
 };

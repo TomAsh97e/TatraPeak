@@ -17,7 +17,12 @@ bool isFinite(double value) { return std::isfinite(value); }
 
 GridTerrain::GridTerrain(GridGeometry geometry, std::vector<float> heights,
                          std::vector<std::uint8_t> mask)
-    : geometry_{geometry}, heights_ellipsoid_m_{std::move(heights)}, valid_mask_{std::move(mask)} {}
+    : geometry_{geometry}, max_row_{static_cast<double>(geometry.rows - 1)},
+      max_column_{static_cast<double>(geometry.columns - 1)},
+      last_latitude_deg_{geometry.first_center_latitude_deg + max_row_ * geometry.latitude_step_deg},
+      last_longitude_deg_{geometry.first_center_longitude_deg +
+                          max_column_ * geometry.longitude_step_deg},
+      heights_ellipsoid_m_{std::move(heights)}, valid_mask_{std::move(mask)} {}
 
 Result<GridTerrain> GridTerrain::create(GridGeometry geometry,
                                         std::vector<float> heights_ellipsoid_m,
@@ -76,35 +81,21 @@ HeightResult GridTerrain::sampleHeight(GeoCoord position) const {
         return TerrainSampleError::OutsideCoverage;
     }
 
-    const double last_latitude_deg =
-        geometry_.first_center_latitude_deg +
-        static_cast<double>(geometry_.rows - 1) * geometry_.latitude_step_deg;
-    const double last_longitude_deg =
-        geometry_.first_center_longitude_deg +
-        static_cast<double>(geometry_.columns - 1) * geometry_.longitude_step_deg;
-    const double min_latitude_deg =
-        std::min(geometry_.first_center_latitude_deg, last_latitude_deg);
-    const double max_latitude_deg =
-        std::max(geometry_.first_center_latitude_deg, last_latitude_deg);
-    const double min_longitude_deg =
-        std::min(geometry_.first_center_longitude_deg, last_longitude_deg);
-    const double max_longitude_deg =
-        std::max(geometry_.first_center_longitude_deg, last_longitude_deg);
-
-    if (position.latitude_deg < min_latitude_deg || position.latitude_deg > max_latitude_deg ||
-        position.longitude_deg < min_longitude_deg || position.longitude_deg > max_longitude_deg) {
+    // create() enforces a north-up grid (negative latitude / positive longitude steps).
+    if (position.latitude_deg < last_latitude_deg_ ||
+        position.latitude_deg > geometry_.first_center_latitude_deg ||
+        position.longitude_deg < geometry_.first_center_longitude_deg ||
+        position.longitude_deg > last_longitude_deg_) {
         return TerrainSampleError::OutsideCoverage;
     }
 
-    const double max_row = static_cast<double>(geometry_.rows - 1);
-    const double max_column = static_cast<double>(geometry_.columns - 1);
     const double fractional_row = std::clamp(
         (position.latitude_deg - geometry_.first_center_latitude_deg) / geometry_.latitude_step_deg,
-        0.0, max_row);
+        0.0, max_row_);
     const double fractional_column =
         std::clamp((position.longitude_deg - geometry_.first_center_longitude_deg) /
                        geometry_.longitude_step_deg,
-                   0.0, max_column);
+                   0.0, max_column_);
 
     const std::size_t row0 = static_cast<std::size_t>(std::floor(fractional_row));
     const std::size_t column0 = static_cast<std::size_t>(std::floor(fractional_column));

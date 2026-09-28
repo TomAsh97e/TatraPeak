@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "timestamp_ns": 0,
+  "observer": {
+    "latitude_deg": 49.20113888888889,
+    "longitude_deg": 20.07127777777778,
+    "height": {"mode": "ellipsoid", "metres": 1454.4077000000002},
+    "simulated": true
+  },
+  "camera": {
+    "width_px": 5712, "height_px": 4284,
+    "fx_px": 3960.5594010481354, "fy_px": 3960.5594010481354,
+    "cx_px": 2856, "cy_px": 2142
+  },
+  "orientation": {"heading_deg": 203.7370232000001, "pitch_deg": 6.470400000000006, "roll_deg": 1.237824000000006},
+  "options": {
+    "min_range_m": 50, "max_range_m": 10000, "near_z_m": 0.01,
+    "visibility": {"sample_step_m": 10, "clearance_band_m": 0.5,
+                   "start_guard_m": 2, "target_guard_m": 30, "max_samples": 10000}
+  }
+}
