@@ -165,12 +165,25 @@ Result<std::vector<PeakCorrection>> readCorrections(const std::filesystem::path&
             return invalid("Every peak correction must have a non-empty string id");
         for (const auto& item : value.items()) {
             if (item.key() != "id" && item.key() != "name" && item.key() != "display_elevation" &&
-                item.key() != "note")
+                item.key() != "note" && item.key() != "geometry_height_correction")
                 return Error{ErrorCode::UnsupportedFormat,
                              "Unsupported peak correction field: " + item.key()};
         }
         PeakCorrection correction;
         correction.id = value["id"].get<std::string>();
+        if (value.contains("geometry_height_correction")) {
+            const auto& geometry = value["geometry_height_correction"];
+            if (!geometry.is_object() || geometry.size() != 2 ||
+                !geometry.contains("ellipsoid_height_m") ||
+                !geometry["ellipsoid_height_m"].is_number() || !geometry.contains("source") ||
+                !geometry["source"].is_string())
+                return invalid("geometry_height_correction requires ellipsoid_height_m and source");
+            const double metres = geometry["ellipsoid_height_m"].get<double>();
+            const auto source = geometry["source"].get<std::string>();
+            if (!std::isfinite(metres) || source.empty())
+                return invalid("Geometry correction needs a finite ellipsoid height and source");
+            correction.geometry_height_correction = GeometryHeightCorrection{metres, source};
+        }
         if (value.contains("name")) {
             if (!value["name"].is_string() || value["name"].get_ref<const std::string&>().empty())
                 return invalid("Corrected peak name must be a non-empty string");
@@ -200,7 +213,7 @@ Result<std::vector<PeakCorrection>> readCorrections(const std::filesystem::path&
             return invalid("Every peak correction must contain a non-empty note");
         correction.note = value["note"].get<std::string>();
         if (!correction.name && !correction.display_elevation &&
-            !correction.clear_display_elevation)
+            !correction.clear_display_elevation && !correction.geometry_height_correction)
             return invalid("Peak correction does not change any value");
         corrections.push_back(std::move(correction));
     }
@@ -268,7 +281,8 @@ Status writePeakCatalogJson(const PreparedPeakCatalog& catalog, const PeakProven
                   {{"latitude_deg", peak.geometry_position.coord.latitude_deg},
                    {"longitude_deg", peak.geometry_position.coord.longitude_deg},
                    {"ellipsoid_height_m", peak.geometry_position.ellipsoid_height_m}}},
-                 {"geometry_height_source", "DemSample"},
+                 {"geometry_height_source",
+                  record.geometry_height_correction ? "ExplicitEllipsoid" : "DemSample"},
                  {"display_elevation", std::move(display_elevation)},
                  {"source",
                   {{"osm_type", "node"},
@@ -279,6 +293,12 @@ Status writePeakCatalogJson(const PreparedPeakCatalog& catalog, const PeakProven
                      {"name:sk", optionalStringJson(record.source_names.name_sk)}}},
                    {"ele", optionalStringJson(record.source_ele)}}},
                  {"correction_note", std::move(correction)}});
+            if (record.geometry_height_correction) {
+                const auto& geometry = *record.geometry_height_correction;
+                document["peaks"].back()["geometry_height_correction"] = {
+                    {"ellipsoid_height_m", geometry.ellipsoid_height_m},
+                    {"source", geometry.source}};
+            }
         }
         const auto serialized = document.dump(2) + '\n';
         std::ofstream stream;
@@ -382,6 +402,11 @@ Result<OsmPeakImport> validateAndDeduplicatePeaks(OsmPeakImport input,
             return invalid("Correction refers to an unselected peak: " + correction.id);
         if (correction.note.empty())
             return invalid("Correction must explain its source: " + correction.id);
+        if (correction.geometry_height_correction &&
+            (!std::isfinite(correction.geometry_height_correction->ellipsoid_height_m) ||
+             correction.geometry_height_correction->source.empty()))
+            return invalid("Geometry correction needs a finite ellipsoid height and source: " +
+                           correction.id);
         if (correction.name && correction.name->empty())
             return invalid("Corrected peak name must not be empty: " + correction.id);
         if (correction.clear_display_elevation && correction.display_elevation)
@@ -459,6 +484,7 @@ Result<OsmPeakImport> validateAndDeduplicatePeaks(OsmPeakImport input,
             if (correction->second.display_elevation)
                 peak.display_elevation = correction->second.display_elevation;
             peak.correction_note = correction->second.note;
+            peak.geometry_height_correction = correction->second.geometry_height_correction;
         }
         output.peaks.push_back(std::move(peak));
     }
@@ -470,6 +496,11 @@ Result<PreparedPeakCatalog> assignGeometryHeights(OsmPeakImport input, const ITe
     output.report = std::move(input.report);
     output.peaks.reserve(input.peaks.size());
     for (auto& source : input.peaks) {
+        if (source.geometry_height_correction &&
+            (!std::isfinite(source.geometry_height_correction->ellipsoid_height_m) ||
+             source.geometry_height_correction->source.empty() || !source.correction_note ||
+             source.correction_note->empty()))
+            return invalid("Invalid geometry height correction: " + source.id);
         const auto height = terrain.sampleHeight(source.coord);
         const auto* sample = std::get_if<HeightSample>(&height);
         if (!sample || !std::isfinite(sample->ellipsoid_height_m)) {
@@ -487,9 +518,15 @@ Result<PreparedPeakCatalog> assignGeometryHeights(OsmPeakImport input, const ITe
         peak.name = source.selected_name;
         peak.geometry_position = {source.coord, sample->ellipsoid_height_m};
         peak.geometry_height_source = GeometryHeightSource::DemSample;
+        if (source.geometry_height_correction) {
+            peak.geometry_position.ellipsoid_height_m =
+                source.geometry_height_correction->ellipsoid_height_m;
+            peak.geometry_height_source = GeometryHeightSource::ExplicitEllipsoid;
+        }
         peak.display_elevation = source.display_elevation;
         output.peaks.push_back({std::move(peak), source.osm_id, std::move(source.source_names),
-                                std::move(source.source_ele), std::move(source.correction_note)});
+                                std::move(source.source_ele), std::move(source.correction_note),
+                                std::move(source.geometry_height_correction)});
         ++output.report.accepted_count;
     }
     return output;

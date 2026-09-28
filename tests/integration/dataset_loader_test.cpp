@@ -159,6 +159,65 @@ TEST_F(DatasetLoader, MatchingPackageCreatesOwnedDataset) {
     EXPECT_TRUE(std::holds_alternative<std::monostate>(validateDataset(dataset)));
 }
 
+TEST_F(DatasetLoader, ExplicitHeightRoundTripsWithoutChangingDemOrDisplayHeight) {
+    const auto corrections =
+        writeJson("corrections.json",
+                  {{"schema_version", 1},
+                   {"corrections",
+                    {{{"id", "osm:node:1"},
+                      {"note", "Synthetic height correction"},
+                      {"geometry_height_correction",
+                       {{"ellipsoid_height_m", 2100.0}, {"source", "Survey fixture"}}}}}}});
+    ASSERT_TRUE(std::holds_alternative<PeakImportReport>(
+        preparePeakCatalog({directory / "raw-osm.json", directory / "terrain-ellipsoid.tif",
+                            directory / "selection.json", corrections, directory})));
+    ASSERT_TRUE(std::holds_alternative<std::monostate>(writeDatasetManifest(manifest_options)));
+    EXPECT_EQ(readJson(directory / "manifest.json")["catalog"]["geometry_height_source"], "Mixed");
+    auto loaded = loadDataset(directory);
+    ASSERT_TRUE(std::holds_alternative<Dataset>(loaded));
+    const auto& dataset = std::get<Dataset>(loaded);
+    const auto& peak = dataset.catalog.peaks[0];
+    EXPECT_EQ(peak.geometry_height_source, GeometryHeightSource::ExplicitEllipsoid);
+    EXPECT_DOUBLE_EQ(peak.geometry_position.ellipsoid_height_m, 2100.0);
+    ASSERT_TRUE(peak.display_elevation);
+    EXPECT_DOUBLE_EQ(peak.display_elevation->metres, 2001.0);
+    EXPECT_DOUBLE_EQ(
+        std::get<HeightSample>(dataset.terrain.sampleHeight(peak.geometry_position.coord))
+            .ellipsoid_height_m,
+        1234.0);
+    EXPECT_TRUE(std::holds_alternative<std::monostate>(validateDataset(dataset)));
+
+    const auto original = readJson(directory / "peaks.json");
+    for (int failure = 0; failure < 5; ++failure) {
+        auto peaks = original;
+        auto& record = peaks["peaks"][0];
+        if (failure == 0)
+            record["geometry_height_correction"]["source"] = "";
+        if (failure == 1)
+            record["correction_note"] = nullptr;
+        if (failure == 2)
+            record["geometry_position"]["ellipsoid_height_m"] = 2110.0;
+        if (failure == 3)
+            record.erase("geometry_height_correction");
+        if (failure == 4)
+            record["geometry_position"]["latitude_deg"] = 60.0;
+        writeJson("peaks.json", peaks);
+        EXPECT_TRUE(std::holds_alternative<Error>(writeDatasetManifest(manifest_options)));
+    }
+    writeJson("peaks.json", original);
+    ASSERT_TRUE(std::holds_alternative<std::monostate>(writeDatasetManifest(manifest_options)));
+    rewriteManifest(
+        [](Json& manifest) { manifest["catalog"]["geometry_height_source"] = "DemSample"; });
+    EXPECT_EQ(loadError().code, ErrorCode::CorruptData);
+}
+
+TEST_F(DatasetLoader, DemHeightMismatchStillRejected) {
+    auto peaks = readJson(directory / "peaks.json");
+    peaks["peaks"][0]["geometry_position"]["ellipsoid_height_m"] = 2100.0;
+    writeJson("peaks.json", peaks);
+    EXPECT_TRUE(std::holds_alternative<Error>(writeDatasetManifest(manifest_options)));
+}
+
 TEST_F(DatasetLoader, RejectsUnsupportedVersionMissingFileAndBadHash) {
     rewriteManifest([](Json& manifest) { manifest["schema_version"] = 2; });
     EXPECT_EQ(loadError().code, ErrorCode::UnsupportedFormat);

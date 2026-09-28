@@ -122,6 +122,12 @@ struct OsmPeakNames {
     std::optional<std::string> name_sk;
 };
 
+// An explicit caller-supplied height, not an assertion of survey accuracy.
+struct GeometryHeightCorrection {
+    double ellipsoid_height_m = 0.0;
+    std::string source;
+};
+
 struct OsmPeakNode {
     PeakId id;
     std::uint64_t osm_id = 0;
@@ -132,6 +138,7 @@ struct OsmPeakNode {
     std::string selected_name;
     std::optional<CatalogElevation> display_elevation;
     std::optional<std::string> correction_note;
+    std::optional<GeometryHeightCorrection> geometry_height_correction;
 };
 
 struct PeakImportIssue {
@@ -164,6 +171,7 @@ struct PeakCorrection {
     std::optional<CatalogElevation> display_elevation;
     bool clear_display_elevation = false;
     std::string note;
+    std::optional<GeometryHeightCorrection> geometry_height_correction;
 };
 
 struct PreparedPeakRecord {
@@ -172,6 +180,7 @@ struct PreparedPeakRecord {
     OsmPeakNames source_names;
     std::optional<std::string> source_ele;
     std::optional<std::string> correction_note;
+    std::optional<GeometryHeightCorrection> geometry_height_correction;
 };
 
 struct PreparedPeakCatalog {

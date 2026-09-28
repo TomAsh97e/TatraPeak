@@ -27,8 +27,9 @@ zakończył się raportem: 1141 elementów wejściowych, 1141 sparsowanych węz�
 - Brak `ele` lub wartość niebędąca jednoznaczną liczbą nie oznacza zera. Szczyt
   pozostaje w katalogu bez `display_elevation`, a raport zapisuje przyczynę.
 - `display_elevation` z OSM ma pionowy układ `unspecified` i służy tylko do
-  etykiety. `geometry_position.ellipsoid_height_m` zawsze pochodzi z
-  `terrain-ellipsoid.tif` i jest używana do obliczeń.
+  etykiety. `geometry_position.ellipsoid_height_m` pochodzi z
+  `terrain-ellipsoid.tif` (domyślnie) i jest używana do obliczeń. Jawny wyjątek
+  opisano poniżej.
 - Brak pokrycia lub NoData w DEM odrzuca rekord z przyczyną `outside_dem` albo
   `dem_nodata`.
 - Powtórzony ten sam identyfikator OSM może zostać scalony tylko przy zgodnych
@@ -38,6 +39,38 @@ Plik [tatras-v1-peak-corrections.json](../config/tatras-v1-peak-corrections.json
 jest obecnie pusty: kontrola wybranego podzbioru nie wykazała poprawki, którą można
 udokumentować lepszym źródłem. Format wymaga dla każdej przyszłej poprawki pola
 `note`; oryginalne nazwy i `ele` nadal zostają zachowane w wyniku.
+
+## Jawna korekta wysokości geometrycznej
+
+Ostry wierzchołek może mieć inną wysokość niż próbka DEM pod jego współrzędnymi.
+Importer obsługuje opcjonalne `geometry_height_correction`, niezależne od
+`display_elevation`. Wartość musi być już wysokością **elipsoidalną WGS84**:
+
+```json
+{
+  "schema_version": 1,
+  "corrections": [{
+    "id": "osm:node:605282386",
+    "geometry_height_correction": {
+      "ellipsoid_height_m": 2110.8089,
+      "source": "Próba IMG_9553: OSM ele 2068 m; założono zgodność z EGM2008; N=42.8089 m; h=H+N"
+    },
+    "note": "Przykład eksperymentalny: datum OSM nieokreślone, wysokość niezweryfikowana pomiarem."
+  }]
+}
+```
+
+`source` i `note` są wymagane, a wysokość musi być skończoną liczbą.
+Katalog zachowuje korektę i jej źródło, oznaczając szczyt jako `ExplicitEllipsoid`;
+to oznaczenie nie poświadcza dokładności. Manifest podaje `Mixed`, jeżeli katalog
+zawiera również szczyty `DemSample`, albo `ExplicitEllipsoid`, gdy skorygowano wszystkie.
+Po zmianie katalogu trzeba ponownie uruchomić `tatra-prepare manifest`.
+
+Raster i współrzędne szczytu pozostają niezmienione. Pokrycie poprawnym DEM jest
+nadal wymagane. Loader sprawdza zgodność wartości korekty z pozycją szczytu,
+obecność jej źródła i notatki oraz deklarację manifestu; dla `DemSample` nadal
+wymaga zgodności wysokości z rastrem. Nie ma automatycznego zastępowania DEM
+wartością OSM `ele` o nieznanym układzie wysokościowym.
 
 ## Ręczna kontrola wyboru
 

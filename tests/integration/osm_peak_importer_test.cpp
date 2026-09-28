@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <limits>
 #include <nlohmann/json.hpp>
 #include <tatra/desktop/io.hpp>
 #include <vector>
@@ -118,12 +119,16 @@ TEST_F(OsmPeakImporter, ProductionPipelineWritesSeparateGeometryAndSourceData) {
     }
     const auto osm = write("raw-osm.json", {{"version", 0.6}, {"elements", elements}});
     const auto selection = write("selection.json", {{"schema_version", 1}, {"osm_ids", ids}});
-    const auto corrections =
-        write("corrections.json", {{"schema_version", 1},
-                                   {"corrections",
-                                    {{{"id", "osm:node:1"},
-                                      {"name", "Szczyt pierwszy"},
-                                      {"note", "Sprawdzone tłumaczenie testowe"}}}}});
+    const auto corrections = write(
+        "corrections.json", {{"schema_version", 1},
+                             {"corrections",
+                              {{{"id", "osm:node:1"},
+                                {"name", "Szczyt pierwszy"},
+                                {"note", "Sprawdzone tłumaczenie testowe"}},
+                               {{"id", "osm:node:2"},
+                                {"geometry_height_correction",
+                                 {{"ellipsoid_height_m", 2044.5}, {"source", "Synthetic survey"}}},
+                                {"note", "Explicit WGS84 fixture height"}}}}});
 
     DemGeoTiff raster;
     raster.geometry = {2, 2, 50.0, 20.0, -1.0, 1.0};
@@ -160,5 +165,56 @@ TEST_F(OsmPeakImporter, ProductionPipelineWritesSeparateGeometryAndSourceData) {
     EXPECT_EQ(document["peaks"][0]["correction_note"], "Sprawdzone tłumaczenie testowe");
     EXPECT_EQ(document["source"]["osm_sha256"].get<std::string>().size(), 64U);
     EXPECT_EQ(document["source"]["terrain_sha256"].get<std::string>().size(), 64U);
+    EXPECT_DOUBLE_EQ(document["peaks"][1]["geometry_position"]["ellipsoid_height_m"], 2044.5);
+    EXPECT_EQ(document["peaks"][1]["geometry_height_source"], "ExplicitEllipsoid");
+    EXPECT_EQ(document["peaks"][1]["geometry_height_correction"]["source"], "Synthetic survey");
+    EXPECT_EQ(document["peaks"][1]["display_elevation"]["metres"], 2002);
+
+    // Malformed or undocumented overrides must fail before writing a catalog.
+    for (const auto& geometry :
+         std::vector<Json>{nullptr,
+                           {{"ellipsoid_height_m", 2000}},
+                           {{"ellipsoid_height_m", "2000"}, {"source", "fixture"}},
+                           {{"ellipsoid_height_m", 2000}, {"source", ""}},
+                           {{"ellipsoid_height_m", 2000}, {"source", "fixture"}, {"typo", 1}}}) {
+        write("corrections.json", {{"schema_version", 1},
+                                   {"corrections",
+                                    {{{"id", "osm:node:2"},
+                                      {"note", "test"},
+                                      {"geometry_height_correction", geometry}}}}});
+        EXPECT_TRUE(std::holds_alternative<Error>(
+            preparePeakCatalog({osm, terrain, selection, corrections, output})));
+    }
+}
+
+TEST_F(OsmPeakImporter, GeometryOverrideRequiresFiniteHeightSourceNoteAndTerrainCoverage) {
+    OsmPeakNode peak;
+    peak.id = "osm:node:1";
+    peak.coord = {49.5, 20.5};
+    peak.source_names.name = "Peak";
+    OsmPeakImport input;
+    input.peaks.push_back(peak);
+    PeakCorrection correction;
+    correction.id = peak.id;
+    correction.note = "Synthetic reference";
+    correction.geometry_height_correction =
+        GeometryHeightCorrection{std::numeric_limits<double>::quiet_NaN(), "fixture"};
+    EXPECT_TRUE(
+        std::holds_alternative<Error>(validateAndDeduplicatePeaks(input, {peak.id}, {correction})));
+    correction.geometry_height_correction = GeometryHeightCorrection{2000, ""};
+    EXPECT_TRUE(
+        std::holds_alternative<Error>(validateAndDeduplicatePeaks(input, {peak.id}, {correction})));
+    correction.geometry_height_correction = GeometryHeightCorrection{2000, "fixture"};
+    correction.note.clear();
+    EXPECT_TRUE(
+        std::holds_alternative<Error>(validateAndDeduplicatePeaks(input, {peak.id}, {correction})));
+    correction.note = "Synthetic reference";
+    input.peaks[0].coord = {47, 20};
+    auto validated = validateAndDeduplicatePeaks(input, {peak.id}, {correction});
+    ASSERT_TRUE(std::holds_alternative<OsmPeakImport>(validated));
+    auto prepared = assignGeometryHeights(std::get<OsmPeakImport>(validated), flatTerrain());
+    ASSERT_TRUE(std::holds_alternative<PreparedPeakCatalog>(prepared));
+    EXPECT_TRUE(std::get<PreparedPeakCatalog>(prepared).peaks.empty());
+    EXPECT_EQ(std::get<PreparedPeakCatalog>(prepared).report.rejected_count, 1U);
 }
 } // namespace

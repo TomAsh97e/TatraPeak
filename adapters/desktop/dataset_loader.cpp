@@ -243,22 +243,34 @@ Result<PeakCatalog> readPeakCatalog(const std::filesystem::path& file,
         PeakCatalog catalog;
         catalog.peaks.reserve(records.size());
         std::unordered_set<PeakId> ids;
+        bool has_dem = false;
+        bool has_explicit = false;
         for (std::size_t index = 0; index < records.size(); ++index) {
             const auto path = "peaks.peaks[" + std::to_string(index) + "]";
             const auto& record = records[index];
-            exactFields(record,
-                        {"id", "name", "geometry_position", "geometry_height_source",
-                         "display_elevation", "source", "correction_note"},
-                        path);
+            if (record.contains("geometry_height_correction"))
+                exactFields(record,
+                            {"id", "name", "geometry_position", "geometry_height_source",
+                             "display_elevation", "source", "correction_note",
+                             "geometry_height_correction"},
+                            path);
+            else
+                exactFields(record,
+                            {"id", "name", "geometry_position", "geometry_height_source",
+                             "display_elevation", "source", "correction_note"},
+                            path);
             Peak peak;
             peak.id = text(record, "id", path);
             peak.name = text(record, "name", path);
             if (!ids.insert(peak.id).second)
                 return corrupt("Duplicate peak id: " + peak.id);
-            if (text(record, "geometry_height_source", path) != "DemSample" ||
-                manifest.geometry_height_source != "DemSample")
+            const auto height_source = text(record, "geometry_height_source", path);
+            const bool explicit_height = height_source == "ExplicitEllipsoid";
+            if (height_source != "DemSample" && !explicit_height)
                 return Error{ErrorCode::UnsupportedFormat,
-                             "Peak geometry height must come from the DEM"};
+                             "Unsupported peak geometry height source"};
+            has_dem |= !explicit_height;
+            has_explicit |= explicit_height;
             const auto& position = record.at("geometry_position");
             exactFields(position, {"latitude_deg", "longitude_deg", "ellipsoid_height_m"},
                         path + ".geometry_position");
@@ -274,13 +286,25 @@ Result<PeakCatalog> readPeakCatalog(const std::filesystem::path& file,
             if (const auto* error = std::get_if<Error>(&position_result))
                 return corrupt(path + ": " + error->message);
             peak.geometry_position = std::get<GeoPosition>(position_result);
-            peak.geometry_height_source = GeometryHeightSource::DemSample;
+            peak.geometry_height_source = explicit_height ? GeometryHeightSource::ExplicitEllipsoid
+                                                          : GeometryHeightSource::DemSample;
+            if (explicit_height) {
+                const auto& correction = record.at("geometry_height_correction");
+                exactFields(correction, {"ellipsoid_height_m", "source"},
+                            path + ".geometry_height_correction");
+                (void)text(correction, "source", path + ".geometry_height_correction");
+                (void)text(record, "correction_note", path);
+                if (number(correction.at("ellipsoid_height_m"), path) != ellipsoid_height)
+                    return corrupt("Geometry correction differs from peak height: " + peak.id);
+            } else if (record.contains("geometry_height_correction")) {
+                return corrupt("DEM peak cannot declare a geometry correction: " + peak.id);
+            }
 
             const auto sampled = terrain.sampleHeight(coord);
             const auto* height = std::get_if<HeightSample>(&sampled);
             if (!height)
                 return corrupt("Peak is outside valid terrain coverage: " + peak.id);
-            if (!nearlyEqual(height->ellipsoid_height_m, ellipsoid_height, 1.0))
+            if (!explicit_height && !nearlyEqual(height->ellipsoid_height_m, ellipsoid_height, 1.0))
                 return corrupt("Peak geometry height does not match terrain: " + peak.id);
 
             const auto& elevation = record.at("display_elevation");
@@ -313,6 +337,10 @@ Result<PeakCatalog> readPeakCatalog(const std::filesystem::path& file,
                 return corrupt(path + ".correction_note must be a string or null");
             catalog.peaks.push_back(std::move(peak));
         }
+        const std::string expected_source =
+            has_explicit ? (has_dem ? "Mixed" : "ExplicitEllipsoid") : "DemSample";
+        if (manifest.geometry_height_source != expected_source)
+            return corrupt("Manifest geometry height source does not match catalog");
         return catalog;
     } catch (const Error& error) {
         return error;
@@ -339,12 +367,14 @@ Status validateDataset(const Dataset& dataset) {
                                               peak.geometry_position.ellipsoid_height_m);
         if (std::holds_alternative<Error>(position))
             return corrupt("Dataset catalog has an invalid peak position: " + peak.id);
-        if (peak.geometry_height_source != GeometryHeightSource::DemSample)
-            return corrupt("Dataset peak geometry height does not come from DEM: " + peak.id);
+        if (peak.geometry_height_source != GeometryHeightSource::DemSample &&
+            peak.geometry_height_source != GeometryHeightSource::ExplicitEllipsoid)
+            return corrupt("Unsupported dataset peak height source: " + peak.id);
         const auto sampled = dataset.terrain.sampleHeight(peak.geometry_position.coord);
         const auto* height = std::get_if<HeightSample>(&sampled);
-        if (!height || !nearlyEqual(height->ellipsoid_height_m,
-                                    peak.geometry_position.ellipsoid_height_m, 1.0))
+        if (!height || (peak.geometry_height_source == GeometryHeightSource::DemSample &&
+                        !nearlyEqual(height->ellipsoid_height_m,
+                                     peak.geometry_position.ellipsoid_height_m, 1.0)))
             return corrupt("Dataset peak is outside terrain or has a mismatched height: " +
                            peak.id);
         if (peak.display_elevation && (!std::isfinite(peak.display_elevation->metres) ||

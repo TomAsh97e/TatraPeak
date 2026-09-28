@@ -362,6 +362,22 @@ Status writeDatasetManifest(const DatasetManifestOptions& options) {
         if (const auto* error = std::get_if<Error>(&peak_count_result))
             return *error;
         const auto peak_count = std::get<std::size_t>(peak_count_result);
+        auto peak_document_result = readJson(options.peaks, "peaks");
+        if (const auto* error = std::get_if<Error>(&peak_document_result))
+            return *error;
+        bool has_dem = false;
+        bool has_explicit = false;
+        for (const auto& peak : std::get<Json>(peak_document_result).at("peaks")) {
+            const auto source = peak.at("geometry_height_source").get<std::string>();
+            if (source == "DemSample")
+                has_dem = true;
+            else if (source == "ExplicitEllipsoid")
+                has_explicit = true;
+            else
+                return invalid("Unsupported peak geometry height source: " + source);
+        }
+        const std::string geometry_source =
+            has_explicit ? (has_dem ? "Mixed" : "ExplicitEllipsoid") : "DemSample";
         const auto peaks_hash = getHash(detail::sha256File(options.peaks));
 
         auto source_result = readJson(options.source_metadata, "source metadata");
@@ -442,7 +458,7 @@ Status writeDatasetManifest(const DatasetManifestOptions& options) {
               {"area_or_point", raster.area_or_point},
               {"coverage_edges_wsen", {west, south, east, north}},
               {"resampling", "none (natural source grid)"}}},
-            {"catalog", {{"peak_count", peak_count}, {"geometry_height_source", "DemSample"}}},
+            {"catalog", {{"peak_count", peak_count}, {"geometry_height_source", geometry_source}}},
             {"required_attribution",
              {"Copernicus DEM GLO-30 Public", "GeographicLib geoid dataset egm2008-2_5",
               "OpenStreetMap"}},

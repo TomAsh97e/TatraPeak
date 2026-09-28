@@ -73,7 +73,7 @@ struct CatalogElevation {
     std::string source;
 };
 
-enum class GeometryHeightSource { DemSample, VerifiedEllipsoid };
+enum class GeometryHeightSource { DemSample, VerifiedEllipsoid, ExplicitEllipsoid };
 
 struct Peak {
     PeakId id;

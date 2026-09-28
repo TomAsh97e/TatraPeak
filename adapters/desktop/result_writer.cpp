@@ -134,6 +134,9 @@ Status writeFrameJson(const FrameResult& frame, const PeakCatalog& catalog,
             case GeometryHeightSource::VerifiedEllipsoid:
                 record["geometry_height_source"] = "VerifiedEllipsoid";
                 break;
+            case GeometryHeightSource::ExplicitEllipsoid:
+                record["geometry_height_source"] = "ExplicitEllipsoid";
+                break;
             default:
                 return Error{ErrorCode::InvalidInput, "Unknown geometry height source"};
             }
