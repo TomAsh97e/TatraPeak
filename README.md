@@ -3,9 +3,9 @@
 Zaimplementowany zakres T01–T17 obejmuje geometrię, kamerę, teren, widoczność,
 silnik, JSON/SVG, przygotowanie i walidację danych oraz pierwsze symulowane widoki
 na rzeczywistym pakiecie Tatr, interpolację orientacji, deterministyczny replay i
-metryki reprojekcji. T19 dodaje benchmarki oraz raport IMG_9553.
-T18 ma lokalne próby zdjęciowe, ale wymaga domknięcia walidacji; T20 pozostaje
-kolejnym etapem MVP.
+metryki reprojekcji. T19 dodaje benchmarki oraz raport IMG_9553. T20 domyka
+wersję demonstracyjną i przenośny most C ABI dla Androida/iOS. T18 ma lokalne
+próby zdjęciowe, ale wymaga domknięcia pełnej walidacji terenowej.
 
 - [Architektura i kontrakty C++](docs/MVP_PLAN.md)
 - [Zadania T01–T20 z testami odbiorowymi](docs/MVP_TASKS.md)
@@ -24,7 +24,7 @@ ctest --preset debug
 ~~~
 
 Dostępne presety: debug, release, asan (GCC/Clang na Unix), desktop-debug
-i desktop-release (z benchmarkami T19).
+i desktop-release (z benchmarkami T19) oraz mobile-core (bez CLI/GDAL/JSON).
 Preset desktop-debug dodatkowo wymaga zainstalowanej biblioteki GDAL z plikami
 nagłówkowymi; nlohmann/json jest pobierane przez CMake. Adaptery obsługują sceny,
 GeoTIFF, katalog OSM, manifest pakietu, wynik JSON i wizualizację SVG.
@@ -46,6 +46,7 @@ Struktura odpowiada przepływowi danych:
 include/tatra/        publiczne struktury i kontrakty rdzenia
 src/                  geometria, kamera, teren, widoczność i silnik
 adapters/desktop/     pliki GeoTIFF/JSON, SVG i przygotowanie pakietu
+adapters/mobile/      C ABI bez zależności od Android/iOS SDK
 apps/tatra/           program analizy scen i replay
 apps/prepare/         narzędzie przygotowania danych
 tools/evaluation/     pomiar błędu projekcji
@@ -59,6 +60,16 @@ data/                 lokalne dane; ignorowane przez Git
 Target tatra_core nie zależy od SDK telefonu, GDAL ani JSON. Adaptery są osobną,
 domyślnie wyłączoną biblioteką tatra_io. Silnik otrzymuje teren i katalog przez
 const referencje; właściciel danych musi przeżyć silnik.
+
+Najkrótsze demo po konfiguracji `desktop-release`:
+
+~~~sh
+cmake --build --preset desktop-release --target tatra-demo
+~~~
+
+Opis wersji pokazowej i artefaktów: [docs/T20_RELEASE.md](docs/T20_RELEASE.md).
+Build oraz kontrakt integracji Android/iOS:
+[docs/MOBILE_PORTABILITY.md](docs/MOBILE_PORTABILITY.md).
 
 Pierwsze demo na rzeczywistym pakiecie opisuje
 [docs/T14_DEMO.md](docs/T14_DEMO.md). Po przygotowaniu danych pojedyncze polecenie

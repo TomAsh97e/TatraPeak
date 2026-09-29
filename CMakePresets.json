@@ -14,20 +14,23 @@
     {"name": "release", "inherits": "base", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}},
     {"name": "asan", "inherits": "debug", "cacheVariables": {"TATRA_ENABLE_SANITIZERS": "ON"}},
     {"name": "desktop-debug", "inherits": "debug", "cacheVariables": {"TATRA_BUILD_DESKTOP_IO": "ON"}},
-    {"name": "desktop-release", "inherits": "release", "cacheVariables": {"TATRA_BUILD_DESKTOP_IO": "ON", "TATRA_BUILD_BENCHMARKS": "ON"}}
+    {"name": "desktop-release", "inherits": "release", "cacheVariables": {"TATRA_BUILD_DESKTOP_IO": "ON", "TATRA_BUILD_BENCHMARKS": "ON"}},
+    {"name": "mobile-core", "inherits": "release", "cacheVariables": {"TATRA_BUILD_CLI": "OFF", "TATRA_BUILD_DESKTOP_IO": "OFF", "TATRA_BUILD_MOBILE_BRIDGE": "ON"}}
   ],
   "buildPresets": [
     {"name": "debug", "configurePreset": "debug"},
     {"name": "release", "configurePreset": "release"},
     {"name": "asan", "configurePreset": "asan"},
     {"name": "desktop-debug", "configurePreset": "desktop-debug"},
-    {"name": "desktop-release", "configurePreset": "desktop-release"}
+    {"name": "desktop-release", "configurePreset": "desktop-release"},
+    {"name": "mobile-core", "configurePreset": "mobile-core"}
   ],
   "testPresets": [
     {"name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
     {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
     {"name": "asan", "configurePreset": "asan", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
     {"name": "desktop-debug", "configurePreset": "desktop-debug", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
-    {"name": "desktop-release", "configurePreset": "desktop-release", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}}
+    {"name": "desktop-release", "configurePreset": "desktop-release", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}},
+    {"name": "mobile-core", "configurePreset": "mobile-core", "output": {"outputOnFailure": true}, "execution": {"noTestsAction": "error"}}
   ]
 }

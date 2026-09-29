@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "status": "demonstration_not_T18_validation",
+  "source_trial": "IMG_9553",
+  "image": {
+    "included_in_repository": false,
+    "width_px": 5712,
+    "height_px": 4284,
+    "crop": "none reported",
+    "device": "iPhone 15 Pro, 1x",
+    "author_and_location_source": "user-owned image and user-supplied position"
+  },
+  "observer": {
+    "latitude_deg": 49.20113888888889,
+    "longitude_deg": 20.07127777777778,
+    "ellipsoid_height_m": 1454.4077000000002,
+    "simulated": true,
+    "caveat": "ground height and vertical datum are assumed; position was not surveyed"
+  },
+  "dataset_manifest_sha256": "235eb73eb33483d1ac2a6c8163a327c44cdcd26d0a5293d5b1b47f679607f4c4",
+  "camera": {
+    "fx_px": 3960.5594010481354,
+    "fy_px": 3960.5594010481354,
+    "cx_px": 2856.0,
+    "cy_px": 2142.0,
+    "intrinsics_source": "estimated from 24 mm equivalent focal length"
+  },
+  "fitted_orientation": {
+    "heading_deg": 203.7370232000001,
+    "pitch_deg": 6.470400000000006,
+    "roll_deg": 1.237824000000006
+  },
+  "points": [
+    {
+      "id": "osm:node:385103809",
+      "role": "uncertain_cloud",
+      "annotation_px": [1878.9473684210527, 814.2105263157895],
+      "prediction_px": [1745.7724211653585, 699.4464498588077],
+      "error_px": 175.80204726220026,
+      "error_deg": 2.143120419701183
+    },
+    {
+      "id": "osm:node:9991444350",
+      "role": "provisional_check",
+      "annotation_px": [2658.7105263157896, 764.1052631578948],
+      "prediction_px": [2655.4119818011404, 671.481238338212],
+      "error_px": 92.68274040894738,
+      "error_deg": 1.1854318233621601
+    },
+    {
+      "id": "osm:node:615589377",
+      "role": "check",
+      "annotation_px": [3131.5789473684213, 476.0],
+      "prediction_px": [3170.2055409014174, 423.0170877449061],
+      "error_px": 65.56830575052459,
+      "error_deg": 0.812845671101114
+    },
+    {
+      "id": "osm:node:321624997",
+      "role": "calibration",
+      "annotation_px": [3945.789473684211, 610.6578947368422],
+      "prediction_px": [3983.311114166406, 617.2070581896146],
+      "error_px": 38.08890975607229,
+      "error_deg": 0.48843256926701584
+    },
+    {
+      "id": "osm:node:605282386",
+      "role": "calibration",
+      "annotation_px": [4866.473684210527, 698.3421052631579],
+      "prediction_px": [4833.356215019404, 689.9923321680883],
+      "error_px": 34.153850095766934,
+      "error_deg": 0.39473756600342114
+    }
+  ],
+  "metrics_definition": "Euclidean pixel error and angle between normalized K^-1 rays; p95 uses nearest-rank",
+  "calibration": {
+    "point_count": 2,
+    "missing_count": 0,
+    "ids": ["osm:node:321624997", "osm:node:605282386"],
+    "errors_px": [38.08890975607229, 34.153850095766934],
+    "median_error_px_nearest_rank": 34.153850095766934,
+    "p95_error_px_nearest_rank": 38.08890975607229,
+    "error_range_px": [34.153850095766934, 38.08890975607229],
+    "errors_deg": [0.48843256926701584, 0.39473756600342114],
+    "median_error_deg_nearest_rank": 0.39473756600342114,
+    "p95_error_deg_nearest_rank": 0.48843256926701584,
+    "error_range_deg": [0.39473756600342114, 0.48843256926701584]
+  },
+  "independent_evaluation": {
+    "point_count": 2,
+    "missing_count": 0,
+    "prediction_in_frame_count": 2,
+    "fraction_predicted_in_frame": 1.0,
+    "ids": ["osm:node:615589377", "osm:node:9991444350"],
+    "roles": ["check", "provisional_check"],
+    "errors_px": [65.56830575052459, 92.68274040894738],
+    "median_error_px_nearest_rank": 65.56830575052459,
+    "p95_error_px_nearest_rank": 92.68274040894738,
+    "error_range_px": [65.56830575052459, 92.68274040894738],
+    "errors_deg": [0.812845671101114, 1.1854318233621601],
+    "median_error_deg_nearest_rank": 0.812845671101114,
+    "p95_error_deg_nearest_rank": 1.1854318233621601,
+    "error_range_deg": [0.812845671101114, 1.1854318233621601]
+  },
+  "excluded_points": [{
+    "id": "osm:node:385103809",
+    "role": "uncertain_cloud",
+    "error_px": 175.80204726220026,
+    "error_deg": 2.143120419701183,
+    "reason": "summit identification is obscured by cloud"
+  }],
+  "acceptance_threshold": {
+    "definition": "at least 80% of held-out annotations predicted in frame and median angular error <= 1 degree",
+    "numerical_threshold_met": true,
+    "result": "not_scored",
+    "reason": "only one photograph, uncertain observer height/datum, estimated intrinsics and one provisional check annotation"
+  },
+  "limitations": [
+    "Two calibration points were used to fit three pose parameters.",
+    "Five summit heights use an explicit OSM plus EGM2008 assumption, not surveyed heights.",
+    "This public report contains no photograph and cannot independently verify the manual annotations.",
+    "The trial is evidence of the pipeline, not full field validation."
+  ]
+}

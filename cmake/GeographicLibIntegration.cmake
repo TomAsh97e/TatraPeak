@@ -15,4 +15,8 @@ function(tatra_add_geographiclib)
         message(FATAL_ERROR "Unexpected GeographicLib CMake layout; review the dependency integration.")
     endif()
     add_subdirectory("${geographiclib_SOURCE_DIR}" "${geographiclib_BINARY_DIR}" EXCLUDE_FROM_ALL)
+    # tatra_core/tatra_mobile can be linked into an Android JNI shared library.
+    if(TARGET GeographicLib_STATIC)
+        set_target_properties(GeographicLib_STATIC PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
 endfunction()

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="720" viewBox="0 0 1280 720" data-debug="false">
+  <title>TatraPeak overlay</title>
+  <style>
+    text { font-family: sans-serif; font-size: 13px; fill: #fff; }
+    .peak-marker { stroke: #111; stroke-width: 1.5; }
+    .peak-label rect { fill: #111; fill-opacity: .82; stroke-width: 2; }
+    .leader { fill: none; stroke-width: 1.5; }
+    .status-visible { fill: #35c759; stroke: #35c759; }
+    .status-uncertain { fill: #ffd60a; stroke: #ffd60a; }
+    .status-missing-terrain { fill: #ff9f0a; stroke: #ff9f0a; stroke-dasharray: 3 2; }
+    .status-occluded { fill: #ff453a; stroke: #ff453a; }
+    .status-not-evaluated { fill: #8e8e93; stroke: #8e8e93; }
+    .peak-label text { fill: #fff; stroke: none; }
+    .legend-background { fill: #111; fill-opacity: .86; stroke: #ddd; }
+    .legend-title { font-weight: bold; }
+  </style>
+  <rect class="canvas-background" width="100%" height="100%" fill="#18212b"/>
+  <line class="leader status-missing-terrain" data-peak-id="test:missing" x1="337.9784732648539" y1="360.0951733676909" x2="344.9784732648539" y2="353.0951733676909"/>
+  <g class="peak-label status-missing-terrain" data-peak-id="test:missing" transform="translate(344.9784732648539 329.0951733676909)">
+    <rect width="272.5" height="24" rx="4"/>
+    <text x="5" y="16">Brak terenu — wysokość: brak danych</text>
+  </g>
+  <line class="leader status-visible" data-peak-id="test:visible" x1="640" y1="360.08726646240569" x2="647" y2="353.08726646240569"/>
+  <g class="peak-label status-visible" data-peak-id="test:visible" transform="translate(647 329.08726646240569)">
+    <rect width="137.5" height="24" rx="4"/>
+    <text x="5" y="16">Widoczny — 2499 m</text>
+  </g>
+  <circle class="peak-marker status-missing-terrain" data-peak-id="test:missing" cx="337.9784732648539" cy="360.0951733676909" r="4"/>
+  <circle class="peak-marker status-visible" data-peak-id="test:visible" cx="640" cy="360.08726646240569" r="4"/>
+  <g class="legend" transform="translate(1056 8)" aria-label="Legenda statusów">
+    <rect class="legend-background" width="216" height="92" rx="5"/>
+    <text class="legend-title" x="10" y="18">Widoczność</text>
+    <circle class="peak-marker status-visible" cx="14" cy="34" r="4"/>
+    <text x="26" y="38">VisibleInModel</text>
+    <circle class="peak-marker status-uncertain" cx="14" cy="56" r="4"/>
+    <text x="26" y="60">Uncertain</text>
+    <circle class="peak-marker status-missing-terrain" cx="14" cy="78" r="4"/>
+    <text x="26" y="82">MissingTerrain</text>
+  </g>
+</svg>

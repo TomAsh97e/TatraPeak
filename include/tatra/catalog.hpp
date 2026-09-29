@@ -7,6 +7,6 @@ namespace tatra {
 struct PeakCatalog {
     std::vector<Peak> peaks;
 };
-// TODO(T12/T13): stable IDs, finite coordinates, duplicate detection.
+// Validates stable non-empty unique IDs, geometry and optional display elevations.
 [[nodiscard]] Status validateCatalog(const PeakCatalog& catalog);
 } // namespace tatra

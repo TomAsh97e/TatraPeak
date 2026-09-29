@@ -1,6 +1,9 @@
 **TatraPeak: plan niezależnego od platformy MVP w C++20.**
 
-To specyfikacja do implementacji, nie gotowa biblioteka. Podane polecenia tatra i tatra-prepare oznaczają projektowane programy. Szczegółowe zadania i kryteria ukończenia znajdują się w [MVP_TASKS.md](MVP_TASKS.md).
+To pierwotny plan architektury, rozwijany razem z działającą implementacją. Aktualny
+zakres i jawnie niedomknięte elementy opisuje
+[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). Szczegółowe zadania i kryteria
+ukończenia znajdują się w [MVP_TASKS.md](MVP_TASKS.md).
 
 MVP oblicza, jakie znane szczyty powinny znajdować się w obrazie kamery o zadanej pozycji, orientacji i parametrach. Wynikiem są współrzędne podpisów, dane szczytów i ocena przesłaniania przez model terenu. Pierwsze wejścia pochodzą z plików. Wszystkie obliczenia działają bez telefonu i po przygotowaniu danych także bez internetu.
 
