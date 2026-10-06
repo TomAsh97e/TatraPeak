@@ -13,13 +13,13 @@ geodezyjnego i optycznego, który można testować niezależnie od telefonu.
 ## Demo
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/TomAsh97e/TatraPeak/main/docs/media/tatrapeak-demo-en.mp4">
+  <a href="docs/media/tatrapeak-demo-en.mp4?raw=1">
     <img src="docs/media/tatrapeak-demo-en.jpg" alt="TatraPeak Android application identifying mountain peaks" width="100%">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/TomAsh97e/TatraPeak/main/docs/media/tatrapeak-demo-en.mp4">▶ Watch the 20-second demo</a>
+  <a href="docs/media/tatrapeak-demo-en.mp4?raw=1">▶ Watch the 20-second demo</a>
 </p>
 
 ## Co jest gotowe
