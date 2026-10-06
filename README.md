@@ -2,59 +2,55 @@
 
 [![C++ build and tests](https://github.com/TomAsh97e/TatraPeak/actions/workflows/ci.yml/badge.svg)](https://github.com/TomAsh97e/TatraPeak/actions/workflows/ci.yml)
 
-TatraPeak to system C++20 do **geometrycznej identyfikacji szczytów górskich**.
-Na podstawie pozycji obserwatora, orientacji i parametrów kamery projektuje szczyty
-na obraz oraz sprawdza ich widoczność względem cyfrowego modelu terenu. Pierwszy
-kompletny zbiór danych obejmuje Tatry.
+TatraPeak is a C++20 system for **geometric identification of mountain peaks**. Based on the observer's position, orientation, and camera parameters, it projects peaks onto an image and checks their visibility against a digital terrain model. The first complete dataset covers the Tatras.
 
-Projekt nie rozpoznaje obrazu przez ML. Wynik pochodzi z jawnego modelu
-geodezyjnego i optycznego, który można testować niezależnie od telefonu.
+The project does not use ML-based image recognition. Its results come from an explicit geodetic and optical model that can be tested independently of the phone.
 
 ## Demo
 
 <p align="center">
-  <a href="docs/media/tatrapeak-demo-en.mp4?raw=1">
+  <a href="https://github.com/TomAsh97e/TatraPeak/blob/main/docs/media/tatrapeak-demo-en.mp4?raw=1">
     <img src="docs/media/tatrapeak-demo-en.jpg" alt="TatraPeak Android application identifying mountain peaks" width="100%">
   </a>
 </p>
 
 <p align="center">
-  <a href="docs/media/tatrapeak-demo-en.mp4?raw=1">▶ Watch the 20-second demo</a>
+  <a href="https://github.com/TomAsh97e/TatraPeak/blob/main/docs/media/tatrapeak-demo-en.mp4?raw=1">▶ Watch the 20-second demo</a>
 </p>
 
-## Co jest gotowe
+## What is ready
 
-- przenośny rdzeń C++20: WGS84, ECEF, ENU, kwaterniony i kamera pinhole;
-- interpolowany raster wysokości oraz ocena przesłaniania przez teren;
-- przygotowanie i walidacja danych Copernicus GLO-30, EGM2008 i OSM;
-- desktopowe renderowanie do JSON/SVG oraz deterministyczny replay sesji;
-- metryki błędu reprojekcji i benchmarki na scenie fotograficznej;
-- wersjonowane C ABI bez eksportowania typów STL/Eigen;
-- aplikacja Android w Kotlinie z CameraX, GPS, IMU, JNI i overlayem;
-- offline TATRAPK v1 z SHA-256 i walidacją przed przekazaniem danych do C++;
-- CI dla Linuxa, Windowsa, macOS, Androida i cross-buildu iOS.
+- portable C++20 core: WGS84, ECEF, ENU, quaternions and a pinhole camera;
+- interpolated height raster and terrain occlusion evaluation;
+- preparation and validation of Copernicus GLO-30, EGM2008 and OSM data;
+- desktop rendering to JSON/SVG and deterministic replay session;
+- reprojection error metrics and benchmarks for a photographic scene;
+- versioned C ABI without exporting STL/Eigen types;
+- Android application in Kotlin with CameraX, GPS, IMU, JNI and overlay;
+- offline TATRAPK v1 with SHA-256 and validation before data transfer to C++;
+- CI for Linux, Windows, macOS, Android, and iOS cross-builds.
 
-[Przykładowy overlay SVG](examples/artifacts/synthetic-overlay.svg) ·
+[Example SVG overlay](examples/artifacts/synthetic-overlay.svg) ·
 [Replay GIF](examples/artifacts/replay.gif) ·
-[Raport próby IMG_9553](examples/artifacts/quality-report-img9553.json)
+[IMG_9553 quality report](examples/artifacts/quality-report-img9553.json)
 
-## Architektura
+## Architecture
 
-Zależności są skierowane do środka. Rdzeń nie zna JSON, GeoTIFF, systemu plików
-ani SDK telefonu. Adaptery dostarczają mu zwalidowane dane w pamięci.
+Dependencies are directed inward. The core does not know about JSON, GeoTIFF, file system
+or phone SDK. Adapters provide it with validated in-memory data.
 
 ~~~mermaid
 flowchart LR
     RAW["DEM + geoid + OSM"] --> PREP["tatra-prepare"]
-    PREP --> PACK["walidowany tatras-v1"]
+    PREP --> PACK["validated tatras-v1"]
     PACK --> IO["desktop IO"]
     PACK --> TPK["TATRAPK v1"]
 
     subgraph CORE["TatraPeak::core"]
         GEO["WGS84 / ECEF / ENU"]
-        CAMERA["kamera pinhole"]
+        CAMERA["pinhole camera"]
         TERRAIN["GridTerrain"]
-        VIS["widoczność"]
+        VIS["visibility"]
         ENGINE["PeakEngine"]
         GEO --> ENGINE
         CAMERA --> ENGINE
@@ -64,123 +60,99 @@ flowchart LR
     IO --> CORE
     TPK --> ANDROID["Kotlin loader"]
     ANDROID --> JNI["JNI → C ABI"] --> CORE
-    CORE --> RESULT["projekcje + stany widoczności"]
-    RESULT --> SVG["JSON / SVG / metryki"]
+    CORE --> RESULT["projections + visibility states"]
+    RESULT --> SVG["JSON / SVG / metrics"]
     RESULT --> UI["overlay Android"]
 ~~~
 
-| Warstwa | Odpowiedzialność |
+| Layer | Responsibility |
 |---|---|
-| TatraPeak::core | geometria, kamera, teren, widoczność, silnik, oś czasu |
-| TatraPeak::evaluation | błąd reprojekcji w pikselach i stopniach |
-| TatraPeak::io | JSON, GeoTIFF, SVG, manifest i przygotowanie danych |
-| TatraPeak::mobile | stabilne, platformowo neutralne C ABI |
-| tatra | render i replay |
-| tatra-prepare | DEM, katalog OSM, manifest i TATRAPK |
-| android/ | CameraX, sensory, lokalizacja, JNI i UI |
+| TatraPeak::core | geometry, camera, terrain, visibility, engine, time axis |
+| TatraPeak::evaluation | pixel and degree reprojection error metrics |
+| TatraPeak::io | JSON, GeoTIFF, SVG, manifest and data preparation |
+| TatraPeak::mobile | stable, platform-agnostic C ABI |
+| tatra | rendering and replay |
+| tatra-prepare | DEM, OSM catalog, manifest and TATRAPK |
+| android/ | CameraX, sensors, location, JNI and UI |
 
-## Jak działa analiza klatki
+## How Frame Analysis Works
 
-1. Pozycje WGS84 są zamieniane na ECEF i lokalny układ ENU.
-2. Kwaternion camera_from_enu przenosi punkt do układu kamery.
-3. Model pinhole liczy piksel: u = fx·x/z+cx, v = fy·y/z+cy.
-4. Punkt otrzymuje stan InFrame, OutsideFrame lub BehindNearPlane.
-5. Dla punktów w kadrze promień obserwator–szczyt jest próbkowany względem DEM.
-6. Widoczność ma jawny stan: VisibleInModel, OccludedInModel, Uncertain
-   albo MissingTerrain.
+1. WGS84 positions are converted to ECEF and the local ENU frame.
+2. The camera_from_enu quaternion moves the point into the camera frame.
+3. Pinhole model calculates pixel: u = fx·x/z+cx, v = fy·y/z+cy.
+4. The point receives a state of InFrame, OutsideFrame or BehindNearPlane.
+5. For points in the frame, the observer-peak distance is sampled against DEM.
+6. Visibility has an explicit state: VisibleInModel, OccludedInModel, Uncertain
+   or MissingTerrain.
 
-Geometria używa double, ponieważ ECEF operuje na wartościach rzędu milionów
-metrów. Raster używa Float32, aby ograniczyć pamięć, a interpolacja przechodzi
-do double. Brak terenu jest stanem, nigdy umowną wysokością zero.
+Geometry uses double because ECEF operates on values of the order of millions
+of meters. Raster uses Float32 to limit memory, and interpolation goes to double.
+A lack of terrain is a state, never an artificial height of zero.
 
-Dataset posiada teren i katalog. PeakEngine pożycza je przez stałe referencje,
-a FrameResult posiada własne dane. Błędy C++ są zwracane jako
-std::variant<T, Error>; C ABI mapuje je na stabilne statusy i komunikaty.
+The dataset owns the terrain and catalog. PeakEngine borrows them through const references, while FrameResult owns its data. C++ errors are returned as std::variant<T, Error>; the C ABI maps them to stable statuses and messages.
 
 ## Android
 
-| Element | Konfiguracja |
+| Element | Configuration |
 |---|---|
-| Język | Kotlin 2.1.20 |
+| Language | Kotlin 2.1.20 |
 | Build | Gradle 8.11.1, AGP 8.9.2 |
 | Android | minSdk 26, target/compileSdk 35 |
 | Native | NDK 27.2.12479018, CMake 3.31.6, JNI |
-| Kamera | CameraX 1.4.2 + Camera2 interop |
-| ABI | release: arm64-v8a; debug: także x86_64 dla emulatora |
-| Telefon docelowy | Samsung Galaxy S10e |
+| Camera | CameraX 1.4.2 + Camera2 interop |
+| ABI | release: arm64-v8a; debug: also x86_64 for emulator |
+| Target phone | Samsung Galaxy S10e |
 
-Aplikacja nie zakłada cameraId="0". Wybiera tylny obiektyw 20–35 mm
-ekwiwalentu najbliższy 26 mm, żąda zoomu 1× i próbuje wyłączyć EIS/OIS.
-Intrinsics pochodzą z LENS_INTRINSIC_CALIBRATION albo jawnego fallbacku
-z ogniskowej i wymiarów sensora. Crop, obrót i transformacja PreviewView są
-przenoszone przez macierze i testowane dla obrotów 0/90/180/270°.
+The application does not assume cameraId="0". It selects the rear lens with a 20–35 mm equivalent focal length closest to 26 mm, requests 1× zoom, and tries to disable EIS/OIS. Intrinsics come from LENS_INTRINSIC_CALIBRATION or an explicit fallback using the focal length and sensor dimensions. Crop, rotation, and the PreviewView transform are represented as matrices and tested for rotations of 0/90/180/270°.
 
-Orientacja korzysta z TYPE_ROTATION_VECTOR. Próbka IMU musi znajdować się
-w granicy 25 ms od timestampu klatki; transformacja uwzględnia osie urządzenia,
-SENSOR_ORIENTATION, obrót bufora i deklinację magnetyczną. GPS dostarcza
-wysokość elipsoidalną WGS84. Pomiar jest odrzucany po 15 s, przy błędzie XY
-powyżej 30 m lub błędzie Z powyżej 50 m. Dostępna jest także pozycja ręczna.
+Orientation uses TYPE_ROTATION_VECTOR. An IMU sample must be within 25 ms of the frame timestamp; the transform accounts for device axes, SENSOR_ORIENTATION, buffer rotation, and magnetic declination. GPS provides WGS84 ellipsoidal height. A measurement is rejected after 15 s, when its XY error exceeds 30 m, or when its Z error exceeds 50 m. Manual positioning is also available.
 
-Evaluate pracuje poza UI, maksymalnie 8 razy/s, z backpressure. JNI ma barierę
-wyjątków, nieprzezroczyste uchwyty i deterministyczne close. Interfejs pokazuje
-podgląd, etykiety, stany widoczności, GPS, pozycję ręczną oraz diagnostykę.
-Nagranie zapisuje do 10 s / 100 klatek w formacie replay; nie zapisuje filmu.
+Evaluate runs off the UI thread, up to 8 times/s, with backpressure. JNI has an exception barrier, opaque handles, and deterministic close. The interface shows the preview, labels, visibility states, GPS, manual position, and diagnostics. Recording saves up to 10 s / 100 frames in replay format; it does not record video.
 
-Pakiet TATRAPK v1 zawiera geometrię rastra, Float32 wysokości, maskę UInt8,
-katalog UTF-8, hash manifestu i hash całego pliku. Aktualny lokalny pakiet ma
-46 670 890 bajtów, raster 2160×4321 i 50 szczytów. Duże dane są ignorowane
-przez Git; bez pakietu aplikacja uruchamia deterministyczną scenę syntetyczną.
+The TATRAPK v1 package contains raster geometry, Float32 heights, a UInt8 mask,
+a UTF-8 catalog, a manifest hash, and a whole-file hash. The current local package is 46 670 890 bytes and contains a 2160×4321 raster and 50 peaks. Large datasets are ignored by Git; without the package, the application runs a deterministic synthetic scene.
 
-## Technologie
+## Technologies
 
 C++20, CMake, Ninja, CTest, Eigen, GeographicLib, GDAL, nlohmann/json,
 GoogleTest, Kotlin, JNI, CameraX, Camera2, Android SensorManager,
-LocationManager, SHA-256 i GitHub Actions.
+LocationManager, SHA-256 and GitHub Actions.
 
-Zależności C++ pobierane przez FetchContent są przypięte do rewizji i SHA-256.
-GDAL oraz JSON należą wyłącznie do opcjonalnej warstwy desktopowej.
+C++ dependencies fetched through FetchContent are pinned to a revision and SHA-256.
+GDAL and JSON belong solely to the optional desktop layer.
 
-## Testy
+## Tests
 
-Ostatnia lokalna weryfikacja:
+Last local verification:
 
-| Zakres | Wynik |
+| Scope | Result |
 |---|---:|
-| C++ desktop-debug, w tym prawdziwy tatras-v1 | **81/81** |
-| C++ mobile-core, bez GDAL/JSON | **34/34** |
+| C++ desktop-debug, including the real tatras-v1 dataset | **81/81** |
+| C++ mobile-core, without GDAL/JSON | **34/34** |
 | Android JVM/JNI Debug | **26/26** |
 | Android JVM/JNI Release | **26/26** |
-| Android assembleDebug i lintDebug | passed |
-| APK testów instrumentalnych | zbudowane |
+| Android assembleDebug and lintDebug | passed |
+| APK of instrumentation tests | built |
 
-Testy obejmują geometrię, granice obrazu, kwaterniony, interpolację terenu,
-NoData, widoczność, walidację GeoTIFF/JSON/manifestu, integralność TATRAPK,
-deterministyczny replay, metryki, C ABI, JNI, intrinsics, orientację i politykę GPS.
-Publiczne nagłówki C++ są kompilowane osobno, a CI uruchamia także ASan/UBSan.
+Tests include geometry, image bounds, quaternions, terrain interpolation,
+NoData, visibility, GeoTIFF/JSON/manifest validation, TATRAPK integrity,
+deterministic replay, metrics, C ABI, JNI, intrinsics, orientation and GPS policy.
+Public C++ headers are compiled separately, and CI also runs ASan/UBSan.
 
-Testy instrumentalne, kalibracja kamery, osie sensorów i pamięć nie zostały jeszcze
-sprawdzone na fizycznym Galaxy S10e. Emulator nie zastępuje tego odbioru.
+Instrumentation tests, camera calibration, sensor axes, and memory have not yet
+been verified on a physical Galaxy S10e. The emulator does not replace this acceptance test.
 
-## Próby i wydajność
+## Trials and Performance
 
-Pierwszy test rzeczywistego terenu renderuje cztery kierunki z symulowanej pozycji,
-sprawdza ruch projekcji, granice pokrycia oraz promienie przechodzące przez styk
-kafli DEM.
+The first real-terrain test renders four directions from a simulated position and checks projection movement, coverage boundaries, and rays crossing a DEM tile boundary.
 
-W próbie fotograficznej IMG_9553 korekta wysokości szczytów zmniejszyła błędy
-dwóch punktów kontrolnych z 254,60 do 65,57 px oraz z 193,36 do 92,68 px.
-Wynik wskazuje wpływ wysokości, ale nie rozstrzyga błędu pozycji, ogniskowej,
-oznaczeń ani rozdzielczości DEM. Pełna walidacja terenowa nadal jest otwarta.
+In the IMG_9553 photographic trial, peak elevation corrections reduced the errors for two control points from 254.60 to 65.57 px and from 193.36 to 92.68 px. The result shows the influence of elevation, but does not isolate errors in position, focal length, annotations, or DEM resolution. Full field validation remains open.
 
-Benchmark siedmiu naprzemiennych par wykazał poprawę mediany sampleHeight
-o **8,18%** kosztem 32 bajtów na raster. Pełne evaluate pozostało praktycznie
-bez zmian: **0,2444 → 0,2446 ms** na testowym komputerze. Odrzucono więc bardziej
-złożony cache, SIMD i własny alokator.
+A benchmark of seven alternating pairs showed an **8.18%** median improvement in sampleHeight at a cost of 32 bytes per raster. Full evaluation remained effectively unchanged: **0.2444 → 0.2446 ms** on the test machine. A more complex cache, SIMD, and a custom allocator were therefore rejected.
 
-## Szybki start
+## Quick Start
 
-Wymagania bazowe: kompilator C++20, CMake ≥3.28 i Ninja. Pierwsza konfiguracja
-może pobrać przypięte zależności; późniejsze testy działają offline.
+Prerequisites: C++20 compiler, CMake ≥3.28, and Ninja. The first configuration may download pinned dependencies; subsequent tests run offline.
 
 ~~~sh
 cmake --preset debug
@@ -188,53 +160,52 @@ cmake --build --preset debug --parallel 2
 ctest --preset debug
 ~~~
 
-Demo generujące result.json i overlay.svg:
+Demo generating result.json and overlay.svg:
 
 ~~~sh
 cmake --preset desktop-release
 cmake --build --preset desktop-release --target tatra-demo
 ~~~
 
-Android wymaga JDK 17 lub 21 i Android SDK. Otwórz katalog android/
-w Android Studio albo uruchom:
+Android requires JDK 17 or 21 and Android SDK. Open the android/ folder in Android Studio or run:
 
 ~~~sh
 cd android
 ./gradlew test assembleDebug
-./gradlew connectedDebugAndroidTest  # emulator lub podłączony telefon
+./gradlew connectedDebugAndroidTest  # emulator or connected phone
 ~~~
 
 APK: android/app/build/outputs/apk/debug/app-debug.apk.
 
-## Ograniczenia
+## Limitations
 
-- wymagana jest znana pozycja, wysokość, orientacja i kalibracja kamery;
-- model pinhole nie koryguje dystorsji, rolling shutter ani zmian stabilizacji;
-- DEM nie opisuje aktualnych drzew, budynków, chmur ani śniegu;
-- VisibleInModel oznacza widoczność w modelu, nie obserwację rzeczywistą;
-- komenda CLI tatra evaluate nie ma jeszcze kompletnego adaptera JSON;
-- pełna walidacja terenowa oraz odbiór na Galaxy S10e pozostają do wykonania;
-- wspólne C ABI cross-kompiluje się dla iOS, ale aplikacja Swift jeszcze nie istnieje.
+- a known position, height, orientation, and camera calibration are required;
+- the pinhole model does not correct for distortion, rolling shutter, or stabilization changes;
+- DEM does not account for current trees, buildings, clouds, or snow;
+- VisibleInModel refers to visibility in the model, not real-world observation;
+- the CLI command tatra evaluate still lacks a complete JSON adapter;
+- full field validation and acceptance on Galaxy S10e remain to be performed;
+- the shared C ABI cross-compiles for iOS, but the Swift application does not yet exist.
 
-## Mapa repozytorium
+## Repository Map
 
 ~~~text
-include/tatra/        publiczne kontrakty C++ i C ABI
-src/                  przenośny rdzeń
-adapters/desktop/     JSON, GeoTIFF, SVG i przygotowanie danych
-adapters/mobile/      platformowo neutralne C ABI
-apps/                 programy tatra i tatra-prepare
-tests/                testy jednostkowe i integracyjne
-benchmarks/           pomiary i raport T19
-android/              aplikacja Kotlin/JNI
-examples/             wejścia i publiczne artefakty demo
-docs/                 szczegółowe raporty etapów i kontrakty
+include/tatra/        public C++ and C ABI contracts
+src/                  portable core
+adapters/desktop/     JSON, GeoTIFF, SVG, and data preparation
+adapters/mobile/      platform-agnostic C ABI
+apps/                 tatra and tatra-prepare programs
+tests/                unit and integration tests
+benchmarks/           measurements and the T19 report
+android/              Kotlin/JNI application
+examples/             inputs and public demo artifacts
+docs/                 detailed stage reports and contracts
 ~~~
 
-Dokumenty pogłębione:
-[architektura C++](docs/MVP_PLAN.md),
-[przenośność](docs/MOBILE_PORTABILITY.md),
+Detailed documents:
+[C++ architecture](docs/MVP_PLAN.md),
+[portability](docs/MOBILE_PORTABILITY.md),
 [Android](docs/ANDROID_PROGRESS.md),
-[format TATRAPK](docs/ANDROID_DATA_FORMAT_PROPOSAL.md),
-[próby fotograficzne](docs/T18_HEIGHT_TRIAL.md) i
-[wydajność](docs/T19_PERFORMANCE.md).
+[TATRAPK format](docs/ANDROID_DATA_FORMAT_PROPOSAL.md),
+[photographic trials](docs/T18_HEIGHT_TRIAL.md) and
+[performance](docs/T19_PERFORMANCE.md).
