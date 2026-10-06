@@ -10,6 +10,18 @@ kompletny zbiór danych obejmuje Tatry.
 Projekt nie rozpoznaje obrazu przez ML. Wynik pochodzi z jawnego modelu
 geodezyjnego i optycznego, który można testować niezależnie od telefonu.
 
+## Demo
+
+<p align="center">
+  <a href="https://raw.githubusercontent.com/TomAsh97e/TatraPeak/main/docs/media/tatrapeak-demo-en.mp4">
+    <img src="docs/media/tatrapeak-demo-en.jpg" alt="TatraPeak Android application identifying mountain peaks" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://raw.githubusercontent.com/TomAsh97e/TatraPeak/main/docs/media/tatrapeak-demo-en.mp4">▶ Watch the 20-second demo</a>
+</p>
+
 ## Co jest gotowe
 
 - przenośny rdzeń C++20: WGS84, ECEF, ENU, kwaterniony i kamera pinhole;
