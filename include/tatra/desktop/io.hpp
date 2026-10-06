@@ -75,6 +75,9 @@ struct SyntheticSessionOptions {
 
 [[nodiscard]] Result<Dataset> loadDataset(const std::filesystem::path& directory);
 [[nodiscard]] Status validateDataset(const Dataset& dataset);
+// Validates the desktop dataset, then writes the approved little-endian TATRAPK v1 file.
+[[nodiscard]] Status writeMobilePackage(const std::filesystem::path& dataset_directory,
+                                        const std::filesystem::path& output_file);
 
 struct DatasetManifestOptions {
     std::string dataset_id;

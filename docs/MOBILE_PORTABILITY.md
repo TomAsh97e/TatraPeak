@@ -116,6 +116,10 @@ krótką sesję z telefonu i odtworzyć ją offline, zanim zostanie dodany tryb 
 ## Co oznacza „portable” w tym repozytorium
 
 Portable jest silnik i jego granica ABI: ten sam kod, te same testy, brak zależności
-od systemu mobilnego i konfiguracje cross-build. Repozytorium nie zawiera jeszcze
-aplikacji, kodu JNI/Swift, dostępu do sensorów, loadera zasobów telefonu ani UI.
-To są cienkie adaptery następnego etapu; ich brak nie wymusza zmian w algorytmach.
+od systemu mobilnego i konfiguracje cross-build. Katalog [android](../android/README.md)
+zawiera aplikację Kotlin/JNI, diagnostykę CameraX, intrinsics, sensorów i lokalizacji
+oraz testy syntetyczne uruchamiane również na JVM hosta. Kod platformowy pozostaje
+poza rdzeniem. Stan odbioru i ograniczenia opisuje [raport etapów Android](ANDROID_PROGRESS.md).
+Rzeczywisty pakiet używa zatwierdzonego [formatu TATRAPK v1](ANDROID_DATA_FORMAT_PROPOSAL.md),
+tworzonego przez desktopowy konwerter i weryfikowanego przez loader Androida przed JNI.
+Nie ma jeszcze adaptera Swift ani potwierdzenia kalibracji/orientacji na Galaxy S10e.

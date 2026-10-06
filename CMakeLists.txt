@@ -42,7 +42,8 @@ if(TATRA_BUILD_DESKTOP_IO)
         adapters/desktop/scene_loader.cpp adapters/desktop/session_loader.cpp
         adapters/desktop/result_writer.cpp adapters/desktop/svg_writer.cpp
         adapters/desktop/data_preparation.cpp adapters/desktop/file_hash.cpp
-        adapters/desktop/osm_peak_importer.cpp adapters/desktop/manifest_parser.cpp)
+        adapters/desktop/osm_peak_importer.cpp adapters/desktop/manifest_parser.cpp
+        adapters/desktop/mobile_package_writer.cpp)
     add_library(TatraPeak::io ALIAS tatra_io)
     target_link_libraries(tatra_io PUBLIC TatraPeak::core
         PRIVATE GDAL::GDAL GeographicLib nlohmann_json::nlohmann_json)

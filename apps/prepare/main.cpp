@@ -21,11 +21,13 @@ void printHelp() {
               << "           --selection FILE --corrections FILE --out DIRECTORY\n"
               << "       tatra-prepare manifest --dataset-id ID --terrain FILE --peaks FILE\\\n"
               << "           --source-metadata FILE --attribution FILE --out DIRECTORY\n"
+              << "       tatra-prepare mobile --dataset DIRECTORY --out FILE\n"
               << "The dem command mosaics and crops the natural WGS84 grid, then converts\n"
               << "EGM2008 orthometric heights to WGS84 ellipsoid heights.\n"
               << "The peaks command imports a reviewed OSM selection and samples geometry\n"
               << "heights from the normalized terrain.\n"
-              << "The manifest command validates and seals a reproducible dataset package.\n";
+              << "The manifest command validates and seals a reproducible dataset package.\n"
+              << "The mobile command converts a validated package to TATRAPK v1.\n";
 }
 
 #if TATRA_BUILD_DESKTOP_IO
@@ -176,6 +178,19 @@ int prepareManifest(int argc, char** argv) {
               << "Written " << (options.output_directory / "ATTRIBUTION.txt").string() << '\n';
     return 0;
 }
+
+int prepareMobile(int argc, char** argv) {
+    if (argc != 6 || std::string_view{argv[2]} != "--dataset" ||
+        std::string_view{argv[4]} != "--out")
+        return report({tatra::ErrorCode::InvalidInput,
+                       "mobile requires --dataset DIRECTORY --out FILE"});
+    const std::filesystem::path output{argv[5]};
+    const auto result = tatra::desktop::writeMobilePackage(argv[3], output);
+    if (const auto* error = std::get_if<tatra::Error>(&result))
+        return report(*error);
+    std::cout << "Written " << output.string() << '\n';
+    return 0;
+}
 #endif
 
 } // namespace
@@ -210,6 +225,14 @@ int main(int argc, char** argv) {
         return prepareManifest(argc, argv);
 #else
         std::cerr << "manifest requires a build with TATRA_BUILD_DESKTOP_IO=ON.\n";
+        return 2;
+#endif
+    }
+    if (std::string_view{argv[1]} == "mobile") {
+#if TATRA_BUILD_DESKTOP_IO
+        return prepareMobile(argc, argv);
+#else
+        std::cerr << "mobile requires a build with TATRA_BUILD_DESKTOP_IO=ON.\n";
         return 2;
 #endif
     }

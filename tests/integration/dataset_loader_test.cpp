@@ -1,6 +1,8 @@
 #include "file_hash.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <gdal_priv.h>
@@ -8,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <ogr_spatialref.h>
 #include <tatra/desktop/io.hpp>
+#include <vector>
 
 namespace {
 using namespace tatra;
@@ -157,6 +160,31 @@ TEST_F(DatasetLoader, MatchingPackageCreatesOwnedDataset) {
     EXPECT_EQ(dataset.catalog.peaks.size(), 30U);
     EXPECT_EQ(dataset.metadata.manifest_sha256.size(), 64U);
     EXPECT_TRUE(std::holds_alternative<std::monostate>(validateDataset(dataset)));
+}
+
+TEST_F(DatasetLoader, MobilePackageHasApprovedHeaderLengthsAndSelfHash) {
+    const auto package = directory / "fixture.tpk";
+    ASSERT_TRUE(std::holds_alternative<std::monostate>(writeMobilePackage(directory, package)));
+    std::ifstream input(package, std::ios::binary);
+    std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>{input}, {}};
+    ASSERT_GE(bytes.size(), 168U);
+    EXPECT_EQ(std::string(reinterpret_cast<const char*>(bytes.data()), 7), "TATRAPK");
+    EXPECT_EQ(bytes[8], 1);
+    const std::vector<std::uint8_t> expected(bytes.begin() + 104, bytes.begin() + 136);
+    std::fill(bytes.begin() + 104, bytes.begin() + 136, 0);
+    const auto unhashed = directory / "fixture-unhashed.tpk";
+    std::ofstream output(unhashed, std::ios::binary);
+    output.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    output.close();
+    auto hash = detail::sha256File(unhashed);
+    ASSERT_TRUE(std::holds_alternative<std::string>(hash));
+    std::string encoded;
+    constexpr char hex[] = "0123456789abcdef";
+    for (const auto byte : expected) { encoded += hex[byte >> 4U]; encoded += hex[byte & 15U]; }
+    EXPECT_EQ(encoded, std::get<std::string>(hash));
+
+    rewriteManifest([](Json& manifest) { manifest["files"]["terrain"]["sha256"] = std::string(64, '0'); });
+    EXPECT_TRUE(std::holds_alternative<Error>(writeMobilePackage(directory, directory / "bad.tpk")));
 }
 
 TEST_F(DatasetLoader, ExplicitHeightRoundTripsWithoutChangingDemOrDisplayHeight) {
