@@ -15,7 +15,7 @@ The project does not use ML-based image recognition. Its results come from an ex
 </p>
 
 <p align="center">
-  <a href="https://github.com/TomAsh97e/TatraPeak/blob/main/docs/media/tatrapeak-demo-en.mp4?raw=1">▶ Watch the 20-second demo</a>
+  <a href="https://youtu.be/S3GfYgYA3SI">▶ Watch the 20-second demo</a>
 </p>
 
 ## What is ready
