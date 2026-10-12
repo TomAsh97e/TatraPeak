@@ -1,66 +1,71 @@
-# Pakiet Android TATRAPK v1
+# Android TATRAPK v1 Package
 
-Status: **zatwierdzony 2026-10-06 i wdrożony**. Nie zmienia `tatras-v1`, publicznego
-C ABI ani formatu sesji T16.
+Status: **approved and implemented on 2026-10-06**. It does not change
+`tatras-v1`, the public C ABI, or the T16 session format.
 
-Jeden plik `tatras-v1.tpk`, bez kompresji, little-endian. Brak GeoTIFF/JSON/GDAL
-w runtime natywnym aplikacji. Desktop czyta istniejący, zwalidowany pakiet
-przez obecny adapter; Android sprawdza plik przed utworzeniem silnika.
+One uncompressed, little-endian `tatras-v1.tpk` file. No GeoTIFF/JSON/GDAL in
+the application's native runtime. The desktop reads the existing validated
+package through the current adapter; Android verifies the file before creating
+the engine.
 
-## Nagłówek — 168 bajtów
+## Header — 168 Bytes
 
-| Offset | Typ | Znaczenie |
+| Offset | Type | Meaning |
 |---:|---|---|
-| 0 | 8 bajtów | magic `TATRAPK\0` |
-| 8 | UInt32 | wersja = 1 |
-| 12 | UInt32 | długość nagłówka = 168 |
-| 16 | UInt64 | długość całego pliku |
+| 0 | 8 bytes | magic `TATRAPK\0` |
+| 8 | UInt32 | version = 1 |
+| 12 | UInt32 | header length = 168 |
+| 16 | UInt64 | total file length |
 | 24, 28 | UInt32 × 2 | rows, columns |
-| 32, 40 | Float64 × 2 | latitude/longitude środka pierwszej komórki, stopnie WGS84 |
-| 48, 56 | Float64 × 2 | kroki latitude/longitude, stopnie, również ujemne |
-| 64 | UInt32 | liczba szczytów |
-| 68 | UInt32 | zarezerwowane = 0 |
-| 72 | UInt32 | długość identyfikatora datasetu UTF-8 |
-| 76 | UInt32 | zarezerwowane = 0 |
-| 80 | UInt64 | długość sekcji wysokości = rows × columns × 4 |
-| 88 | UInt64 | długość maski = rows × columns |
-| 96 | UInt64 | długość sekcji szczytów |
-| 104 | 32 bajty | SHA-256 całego pliku z wyzerowanym polem 104–135 |
-| 136 | 32 bajty | SHA-256 manifestu wejściowego zwalidowanego pakietu tatras-v1 |
+| 32, 40 | Float64 × 2 | latitude/longitude of the first cell center, WGS84 degrees |
+| 48, 56 | Float64 × 2 | latitude/longitude steps, degrees, including negative values |
+| 64 | UInt32 | peak count |
+| 68 | UInt32 | reserved = 0 |
+| 72 | UInt32 | UTF-8 dataset ID length |
+| 76 | UInt32 | reserved = 0 |
+| 80 | UInt64 | height-section length = rows × columns × 4 |
+| 88 | UInt64 | mask length = rows × columns |
+| 96 | UInt64 | peak-section length |
+| 104 | 32 bytes | SHA-256 of the whole file with bytes 104–135 zeroed |
+| 136 | 32 bytes | SHA-256 of the validated input tatras-v1 package manifest |
 
-Hash wykrywa uszkodzenie i identyfikuje dokładne dane; nie jest podpisem cyfrowym.
-Konwerter najpierw uruchamia istniejącą walidację plików/hashów pakietu źródłowego.
+The hash detects corruption and identifies the exact data; it is not a digital
+signature. The converter first runs the existing package validation for the
+source files and hashes.
 
-## Sekcje w kolejności
+## Sections in Order
 
-1. Identyfikator datasetu: dokładnie podana liczba bajtów UTF-8, bez NUL.
-2. Wysokości Float32, row-major, **metry elipsoidalne WGS84**.
-3. Maska UInt8, row-major, tylko 0 (brak danych) albo 255 (ważna wysokość).
-4. Katalog szczytów: rekordy o stałym prefiksie 48 bajtów i zmiennej części tekstowej.
+1. Dataset ID: exactly the specified number of UTF-8 bytes, without a NUL.
+2. Float32 heights, row-major, in **WGS84 ellipsoidal metres**.
+3. UInt8 mask, row-major, containing only 0 (missing data) or 255 (valid height).
+4. Peak catalog: records with a fixed 48-byte prefix and variable text data.
 
-Rekord szczytu: długości id i nazwy (UInt32 × 2), latitude/longitude/wysokość
-geometryczna elipsoidalna (Float64 × 3), flaga wysokości opisowej (UInt8 0/1),
-7 zerowych bajtów rezerwy, wysokość opisowa (Float64; zero, jeśli flaga = 0),
-następnie id UTF-8 i nazwa UTF-8. Wysokość opisowa jest kopiowana z katalogu,
-nie wyprowadzana z wysokości geometrycznej. Nie dodajemy domyślnego „n.p.m.”
-bez informacji o układzie wysokości w danych źródłowych.
+A peak record contains the ID and name lengths (UInt32 × 2),
+latitude/longitude/ellipsoidal geometry height (Float64 × 3), a display-elevation
+flag (UInt8 0/1), 7 zeroed reserved bytes, the display elevation (Float64; zero
+when the flag is 0), followed by the UTF-8 ID and UTF-8 name. The display
+elevation is copied from the catalog, not derived from the geometry height. Do
+not add a default “above sea level” label when the source data does not identify
+the vertical reference.
 
-## Walidacja i pamięć
+## Validation and Memory
 
-Loader najpierw strumieniowo weryfikuje rozmiar i SHA-256; dopiero potem dekoduje.
-Wszystkie mnożenia/sumy liczności kontrolują overflow. Odrzuca nieznaną wersję,
-niezerowe rezerwy, końcowe dodatkowe bajty, ucięte sekcje, niepoprawne UTF-8,
-NUL, duplikaty id, niepoprawne współrzędne i nie-skończone ważne wysokości.
+The loader first verifies the size and SHA-256 as a stream, then decodes the
+file. Every multiplication and addition involving counts is checked for
+overflow. It rejects unknown versions, nonzero reserved fields, extra trailing
+bytes, truncated sections, invalid UTF-8, NUL characters, duplicate IDs, invalid
+coordinates, and non-finite valid heights.
 
-Jawne limity v1: plik ≤ 256 MiB, ≤ 40 mln komórek, ≤ 100 tys. szczytów,
-≤ 4096 bajtów na napis; rows/columns ≥ 2. Limity chronią Galaxy S10e przed
-niekontrolowaną alokacją, ale szczytowe zużycie pamięci trzeba zmierzyć na telefonie:
-C ABI kopiuje raster, a adapter JNI obecnie także przygotowuje bufory pośrednie.
-Po create loader zwalnia wejściowe tablice. Konwerter odrzuca pakiet przekraczający limity.
+Explicit v1 limits: file ≤ 256 MiB, ≤ 40 million cells, ≤ 100,000 peaks,
+≤ 4096 bytes per string; rows/columns ≥ 2. The limits protect the Galaxy S10e
+from uncontrolled allocation, but peak memory use must still be measured on the
+phone: the C ABI copies the raster, and the JNI adapter currently also prepares
+intermediate buffers. The loader releases the input arrays after create. The
+converter rejects packages that exceed the limits.
 
-Zasób trafia do `android/app/src/main/assets/datasets/` lokalnie (duży plik
-ignorowany w Git); aplikacja rozróżnia brak pakietu od uszkodzenia i nadal
-udostępnia diagnostykę syntetyczną offline.
+The asset is placed locally in `android/app/src/main/assets/datasets/` (the large
+file is ignored by Git); the application distinguishes a missing package from a
+corrupt one and still provides offline synthetic diagnostics.
 
 ```sh
 cmake --preset desktop-debug

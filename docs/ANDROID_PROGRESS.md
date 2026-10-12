@@ -1,122 +1,126 @@
-# Android MVP — stan na 2026-10-06
+# Android MVP — Status as of 2026-10-06
 
-Nie wykonano testów na telefonie, zgodnie z decyzją o kontynuowaniu bez podłączania
-Samsunga Galaxy S10e. Wyniki sprzętowe poniżej są oznaczone jako niewykonane.
+No tests have been run on a phone, following the decision to continue without
+connecting the Samsung Galaxy S10e. Hardware results below are marked as not run.
 
-## Etap 1 — build i JNI
+## Stage 1 — Build and JNI
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- projekt Gradle/Kotlin, minSdk 26, tylko `arm64-v8a`, przypięty NDK 27.2.12479018;
-- `libtatra_jni.so` linkuje `TatraPeak::mobile`; CLI, desktop IO, testy CMake i benchmarki
-  są wyłączone w buildzie APK;
-- `NativeEngine : Closeable`, create/evaluate/destroy, statusy C ABI i bariera wyjątków;
-- prawdziwy JNI smoke test odpowiadający `mobile_c_api_test.c`, uruchamiany na JVM hosta;
-- ekran diagnostyczny pokazuje wynik syntetyczny.
+- Gradle/Kotlin project, minSdk 26, `arm64-v8a` only, pinned NDK 27.2.12479018;
+- `libtatra_jni.so` links `TatraPeak::mobile`; the CLI, desktop IO, CMake tests,
+  and benchmarks are disabled in the APK build;
+- `NativeEngine : Closeable`, create/evaluate/destroy, C ABI statuses, and an
+  exception barrier;
+- a real JNI smoke test corresponding to `mobile_c_api_test.c`, run on the host JVM;
+- a diagnostics screen showing the synthetic result.
 
-Pliki: `android/settings.gradle.kts`, `android/build.gradle.kts`,
+Files: `android/settings.gradle.kts`, `android/build.gradle.kts`,
 `android/app/build.gradle.kts`, `android/app/src/main/cpp/`,
 `android/app/src/main/java/pl/tatrapeak/engine/`, `SyntheticScene.kt`,
 `NativeEngineTest.kt`, `MainActivity.kt`.
 
-Telefon: instalacja, uruchomienie, test JNI arm64 i pomiar wycieku — niewykonane.
+Phone: installation, launch, arm64 JNI test, and leak measurement — not run.
 
-## Etap 2 — kamera
+## Stage 2 — Camera
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- CameraX `PreviewView` z `FIT_CENTER`, ImageAnalysis i przezroczystym overlay;
-- wybór tylnego kandydata 1× z ogniskowej i rozmiaru sensora, bez stałego cameraId;
-- żądanie physical camera ID, zoom 1× oraz wyłączenie EIS/OIS, z pokazaniem
-  faktycznych metadanych odpowiedzi;
-- jawne `bufferToView = sensorToView * inverse(sensorToBuffer)`;
-- testy rogów, środka, cropu i wszystkich obrotów ćwierćobrotowych.
+- CameraX `PreviewView` with `FIT_CENTER`, ImageAnalysis, and a transparent overlay;
+- selection of a rear 1× candidate based on focal length and sensor size, without
+  a fixed cameraId;
+- requests for a physical camera ID, 1× zoom, and disabled EIS/OIS, while showing
+  the actual response metadata;
+- explicit `bufferToView = sensorToView * inverse(sensorToBuffer)`;
+- tests for corners, center, crop, and all quarter-turn rotations.
 
-Pliki: `camera/CameraController.kt`, `camera/ImageGeometry.kt`, `ui/OverlayView.kt`,
-`ImageGeometryTest.kt`, manifest i zależności CameraX.
+Files: `camera/CameraController.kt`, `camera/ImageGeometry.kt`, `ui/OverlayView.kt`,
+`ImageGeometryTest.kt`, the manifest, and CameraX dependencies.
 
-Telefon: wybór głównego obiektywu, zgodność punktów overlay i obrót ekranu — niewykonane.
+Phone: primary-lens selection, overlay point alignment, and screen rotation — not run.
 
-## Etap 3 — intrinsics
+## Stage 3 — Intrinsics
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- preferowane `LENS_INTRINSIC_CALIBRATION`;
-- jawny fallback z ogniskowej, rozmiaru sensora i pixel array;
-- przeliczenie fx/fy/cx/cy przez sensor→buffer, crop i obrót;
-- źródło i przybliżenia są widoczne w diagnostyce; skew lub niezgodne active arrays
-  blokują użycie zamiast tworzyć pozornie poprawny wynik.
+- preferred `LENS_INTRINSIC_CALIBRATION`;
+- explicit fallback based on focal length, sensor size, and pixel array;
+- conversion of fx/fy/cx/cy through sensor→buffer, crop, and rotation;
+- the source and approximations are visible in diagnostics; skew or inconsistent
+  active arrays block use instead of producing a deceptively valid result.
 
-Pliki: `camera/CameraIntrinsics.kt`, `camera/Intrinsics.kt`, `IntrinsicsTest.kt`.
+Files: `camera/CameraIntrinsics.kt`, `camera/Intrinsics.kt`, `IntrinsicsTest.kt`.
 
-Telefon: wiarygodność metadanych, crop ISP, dystorsja i kalibracja — niewykonane.
+Phone: metadata reliability, ISP crop, distortion, and calibration — not run.
 
-## Etap 4 — orientacja
+## Stage 4 — Orientation
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- `TYPE_ROTATION_VECTOR`, timestamp próbek i bufor dopasowania do klatki (25 ms);
-- jawna macierz ENU→kamera, SENSOR_ORIENTATION, obrót bufora i deklinacja;
-- kwaternion w,x,y,z i diagnostyczne heading/pitch/roll;
-- niezależne testy północ, wschód, zenit, landscape, roll oraz znak deklinacji;
-- pełny opis konwencji w `ANDROID_ORIENTATION.md`.
+- `TYPE_ROTATION_VECTOR`, sample timestamps, and a frame-matching buffer (25 ms);
+- explicit ENU→camera matrix, SENSOR_ORIENTATION, buffer rotation, and declination;
+- a w,x,y,z quaternion and diagnostic heading/pitch/roll;
+- independent tests for north, east, zenith, landscape, roll, and declination sign;
+- a full convention description in `ANDROID_ORIENTATION.md`.
 
-Pliki: `sensors/OrientationMath.kt`, `sensors/OrientationTracker.kt`,
+Files: `sensors/OrientationMath.kt`, `sensors/OrientationTracker.kt`,
 `OrientationTest.kt`, `docs/ANDROID_ORIENTATION.md`.
 
-Telefon: poprawność osi, timestampów i wskazań na Galaxy S10e — niewykonane.
+Phone: axes, timestamps, and readings on the Galaxy S10e — not run.
 
-## Etap 5 — lokalizacja
+## Stage 5 — Location
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- CAMERA oraz FINE/COARSE w manifeście i obsługa odmowy;
-- bieżące aktualizacje GPS bez bezwarunkowego lastLocation;
-- wysokość elipsoidalna `Location.altitude`, hasAltitude i dokładności;
-- odrzucenie wieku >15 s, błędu XY >30 m i błędu Z >50 m;
-- ręczna pozycja testowa, zachowana po odtworzeniu Activity;
-- deklinacja przez `GeomagneticField` i wstrzymanie evaluate przy brakujących danych;
-- evaluate maksymalnie 8 razy/s poza UI, z backpressure i publikacją wyniku na UI.
+- CAMERA and FINE/COARSE permissions in the manifest, including denial handling;
+- current GPS updates without unconditional use of lastLocation;
+- ellipsoidal `Location.altitude`, hasAltitude, and accuracy values;
+- rejection of samples older than 15 s, with XY error above 30 m, or Z error
+  above 50 m;
+- a manual test position preserved when the Activity is recreated;
+- declination through `GeomagneticField`, with evaluate paused when data is missing;
+- evaluate at most 8 times/s off the UI thread, with backpressure and publication
+  of results to the UI.
 
-Pliki: `location/LocationPolicy.kt`, `location/LocationTracker.kt`,
+Files: `location/LocationPolicy.kt`, `location/LocationTracker.kt`,
 `LocationPolicyTest.kt`, `engine/FrameEvaluator.kt`, `MainActivity.kt`.
 
-Telefon: uprawnienia, GPS, deklinacja i zachowanie bez sensorów — niewykonane.
+Phone: permissions, GPS, declination, and behavior without sensors — not run.
 
-## Etap 6 — dane offline
+## Stage 6 — Offline Data
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- zatwierdzony format TATRAPK v1 i polecenie `tatra-prepare mobile`;
-- konwerter najpierw ładuje i waliduje istniejący pakiet `tatras-v1`;
-- loader Androida przed JNI sprawdza długość, wersję, overflow, rezerwy, SHA-256,
-  UTF-8, maskę, wymiary, rekordy i końcowe bajty;
-- wygenerowany lokalny asset ma około 45 MiB, raster 2160×4321, 50 szczytów,
+- approved TATRAPK v1 format and the `tatra-prepare mobile` command;
+- the converter first loads and validates the existing `tatras-v1` package;
+- before JNI, the Android loader checks length, version, overflow, reserved fields,
+  SHA-256, UTF-8, mask, dimensions, records, and trailing bytes;
+- the generated local asset is about 45 MiB, with a 2160×4321 raster and 50 peaks,
   SHA-256 `5e6ca2e3405d45ad0dc4781b2ac70228fdfda4baa9a33aff3d5a6eab5f5e4e1b`;
-- asset jest niekompresowany w APK i ignorowany przez Git; brak assetu daje jawny
-  fallback do fixture syntetycznego.
+- the asset is stored uncompressed in the APK and ignored by Git; a missing asset
+  causes an explicit fallback to the synthetic fixture.
 
-Pliki: `adapters/desktop/mobile_package_writer.cpp`, `io.hpp`, `apps/prepare/main.cpp`,
+Files: `adapters/desktop/mobile_package_writer.cpp`, `io.hpp`, `apps/prepare/main.cpp`,
 `data/MobilePackage.kt`, `MobilePackageTest.kt`, `ANDROID_DATA_FORMAT_PROPOSAL.md`.
 
-Telefon: szczytowe zużycie pamięci loadera i czas utworzenia silnika — niewykonane.
+Phone: loader peak-memory usage and engine creation time — not run.
 
-## Etap 7 — działający overlay
+## Stage 7 — Working Overlay
 
-Gotowe na komputerze:
+Completed on the development machine:
 
-- evaluate działa na pojedynczym workerze z backpressure, maksymalnie 8 razy/s;
-- wynik trafia na UI, a overlay pomija OutsideFrame/BehindNearPlane;
-- nazwa, opcjonalna wysokość i pięć stanów widoczności mają odrębne kolory;
-- CameraX, sensory, GPS i silnik są zamykane w lifecycle;
-- przycisk nagrywa do 10 s / 100 klatek do istniejącego formatu replay T16.
+- evaluate runs on a single worker with backpressure, at most 8 times/s;
+- the result reaches the UI, and the overlay skips OutsideFrame/BehindNearPlane;
+- the name, optional elevation, and five visibility states use distinct colors;
+- CameraX, sensors, GPS, and the engine are closed with the lifecycle;
+- a button records up to 10 s / 100 frames in the existing T16 replay format.
 
-Pliki: `engine/FrameEvaluator.kt`, `ui/OverlayView.kt`, `ui/MainActivity.kt`,
+Files: `engine/FrameEvaluator.kt`, `ui/OverlayView.kt`, `ui/MainActivity.kt`,
 `data/DiagnosticRecorder.kt`.
 
-Telefon: czytelność etykiet, wydajność 5–10 Hz, lifecycle i replay nagrania — niewykonane.
+Phone: label readability, 5–10 Hz performance, lifecycle, and replay recording — not run.
 
-## Weryfikacja na komputerze
+## Development-Machine Verification
 
 ```text
 cmake --preset mobile-core
@@ -129,10 +133,10 @@ cd android
 ./gradlew assembleDebugAndroidTest                 passed
 ```
 
-APK aplikacji: `android/app/build/outputs/apk/debug/app-debug.apk` (arm64-v8a).
-APK testowe: `android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`.
-`libtatra_jni.so` zależy tylko od bibliotek systemowych Android (`libm`, `libdl`,
-`libc`); GDAL i nlohmann/json nie weszły do APK.
+Application APK: `android/app/build/outputs/apk/debug/app-debug.apk` (arm64-v8a).
+Test APK: `android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`.
+`libtatra_jni.so` depends only on Android system libraries (`libm`, `libdl`,
+`libc`); GDAL and nlohmann/json did not enter the APK.
 
-`connectedDebugAndroidTest`, `adb install`, uruchomienie, odbiór CameraX/orientacji,
-profilowanie pamięci i kalibracja na Galaxy S10e pozostają niewykonane bez telefonu.
+`connectedDebugAndroidTest`, `adb install`, launch, CameraX/orientation acceptance,
+memory profiling, and Galaxy S10e calibration remain untested without the phone.

@@ -1,52 +1,55 @@
-# Przenośny rdzeń Android/iOS
+# Portable Android/iOS Core
 
-TatraPeak udostępnia dwa poziomy integracji bez zależności od SDK telefonu:
+TatraPeak provides two integration layers with no dependency on a phone SDK:
 
-- `TatraPeak::core` — publiczne API C++20;
-- `TatraPeak::mobile` i [mobile.h](../include/tatra/mobile.h) — stabilna granica C ABI
-  dla Objective-C/Swift i cienkiej warstwy JNI na Androidzie.
+- `TatraPeak::core` — the public C++20 API;
+- `TatraPeak::mobile` and [mobile.h](../include/tatra/mobile.h) — a stable C ABI
+  boundary for Objective-C/Swift and a thin JNI layer on Android.
 
-Oba targety korzystają tylko z Eigen i statycznego GeographicLib. Nie zależą od
-GDAL, nlohmann/json, systemu plików, sieci, kamery, GUI ani SDK Android/iOS.
-GDAL i narzędzia przygotowania danych pozostają na komputerze. Telefon dostaje
-gotowy regionalny raster Float32, maskę oraz katalog szczytów.
+Both targets use only Eigen and a statically linked GeographicLib. They do not
+depend on GDAL, nlohmann/json, the file system, network, camera, GUI, or the
+Android/iOS SDK. GDAL and the data preparation tools remain on the desktop. The
+phone receives a prepared regional Float32 raster, a mask, and a peak catalog.
 
 ```text
-desktop: DEM + OSM -> tatra-prepare -> zasoby aplikacji
+desktop: DEM + OSM -> tatra-prepare -> application assets
                                       |
-telefon: zasoby -> dekoder platformy -> C ABI -> wyniki -> natywny overlay
-                   GPS/IMU/kamera -----^                |
-                   korekta osi/północy -----------------+
+phone: assets -> platform decoder -> C ABI -> results -> native overlay
+                GPS/IMU/camera --------^                 |
+                axis/north correction -------------------+
 ```
 
-## Kontrakt C ABI
+## C ABI Contract
 
-`tatra_mobile_engine_create` kopiuje raster, maskę, rekordy i napisy. Po jego
-powrocie aplikacja może zwolnić bufory wejściowe. `tatra_mobile_engine_destroy`
-zwalnia całość. Utworzenie dużego rastra chwilowo wymaga pamięci na wejście i kopię;
-bufory źródłowe należy zwolnić od razu po sukcesie.
+`tatra_mobile_engine_create` copies the raster, mask, records, and strings. Once
+it returns, the application may release the input buffers.
+`tatra_mobile_engine_destroy` releases everything. Creating a large raster
+temporarily requires memory for both the input and its copy; the source buffers
+should be released immediately after a successful call.
 
-Przed każdą klatką aplikacja wypełnia `tatra_mobile_query`, a następnie wywołuje
-`tatra_mobile_engine_evaluate`. `tatra_mobile_engine_peak_count` daje zawsze
-wystarczający rozmiar bufora wynikowego. Gdy bufor jest za mały, funkcja niczego
-częściowo nie zapisuje, zwraca `TATRA_MOBILE_BUFFER_TOO_SMALL` i wymagany rozmiar.
+Before each frame, the application fills `tatra_mobile_query` and then calls
+`tatra_mobile_engine_evaluate`. `tatra_mobile_engine_peak_count` always provides
+a sufficient result-buffer size. If the buffer is too small, the function writes
+nothing partially, returns `TATRA_MOBILE_BUFFER_TOO_SMALL`, and reports the
+required size.
 
-Wynikowe struktury są własnością wywołującego. Pola `peak_id` i `peak_name`
-wskazują napisy silnika ważne do jego zniszczenia; skopiuj je, jeśli mają żyć
-dłużej. Osobne pole opcjonalnej wysokości opisowej zapobiega wyświetlaniu
-elipsoidalnej wysokości używanej przez geometrię jako wysokości n.p.m. Jedna
-instancja silnika nie jest thread-safe. Można używać różnych instancji równolegle
-albo synchronizować dostęp z zewnątrz. Żaden wyjątek C++ nie przekracza C ABI —
-status i opcjonalny bufor komunikatu opisują błąd.
+Result structures belong to the caller. The `peak_id` and `peak_name` fields
+point to engine-owned strings that remain valid until the engine is destroyed;
+copy them if they must live longer. A separate optional display-elevation field
+prevents the ellipsoidal height used by the geometry from being shown as an
+elevation above sea level. A single engine instance is not thread-safe. Separate
+instances may run concurrently, or access may be synchronized externally. No
+C++ exception crosses the C ABI — a status and an optional message buffer
+describe the error.
 
-`TATRA_MOBILE_ABI_VERSION` oraz `tatra_mobile_abi_version()` pozwalają sprawdzić
-zgodność wrappera. Publiczne typy stanów mają jawny rozmiar `int32_t`; liczności
-używają natywnego `size_t`. Test integracyjny jest napisany jako C, nie C++:
+`TATRA_MOBILE_ABI_VERSION` and `tatra_mobile_abi_version()` allow wrappers to
+check compatibility. Public state types have an explicit `int32_t` size; counts
+use native `size_t`. The integration test is written in C, not C++:
 [mobile_c_api_test.c](../tests/integration/mobile_c_api_test.c).
 
-## Wspólny build bez warstwy desktopowej
+## Shared Build Without the Desktop Layer
 
-Na komputerze ten sam wariant sprawdza preset:
+The same variant is verified on a desktop with this preset:
 
 ```sh
 cmake --preset mobile-core
@@ -54,13 +57,13 @@ cmake --build --preset mobile-core --parallel 2
 ctest --preset mobile-core
 ```
 
-Preset wyłącza CLI oraz `tatra_io`, ale buduje `tatra_core`, `tatra_mobile` i testy
-syntetyczne. Pierwsza konfiguracja może pobrać przypięte źródła zależności; późniejszy
-build i testy nie potrzebują sieci.
+The preset disables the CLI and `tatra_io`, but builds `tatra_core`,
+`tatra_mobile`, and the synthetic tests. The first configuration may download
+pinned dependency sources; subsequent builds and tests do not need network access.
 
 ## Android NDK
 
-Przykład dla urządzeń arm64 (podstaw ścieżkę do własnego NDK):
+Example for arm64 devices (replace the path with your own NDK path):
 
 ```sh
 cmake -S . -B build/android-arm64 -G Ninja \
@@ -72,14 +75,15 @@ cmake -S . -B build/android-arm64 -G Ninja \
 cmake --build build/android-arm64 --target tatra_mobile --parallel 2
 ```
 
-W projekcie aplikacji najprościej dodać repozytorium przez `add_subdirectory` i
-podlinkować `TatraPeak::mobile` do małej biblioteki JNI. Kotlin nie wywołuje C ABI
-bezpośrednio — JNI odpowiada wyłącznie za konwersję tablic/struktur i zarządzanie
-uchwytem. Algorytmy i walidacja pozostają we wspólnym kodzie.
+In the application project, the simplest approach is to add the repository with
+`add_subdirectory` and link `TatraPeak::mobile` into a small JNI library. Kotlin
+does not call the C ABI directly — JNI is responsible only for converting
+arrays/structures and managing the handle. Algorithms and validation remain in
+the shared code.
 
 ## iOS
 
-Statyczne biblioteki dla urządzenia arm64:
+Static libraries for an arm64 device:
 
 ```sh
 cmake -S . -B build/ios -G Xcode \
@@ -90,36 +94,38 @@ cmake -S . -B build/ios -G Xcode \
 cmake --build build/ios --config Release --target tatra_mobile --parallel 2
 ```
 
-Nagłówek C może zostać wystawiony Swiftowi przez bridging header albo module map.
-Docelowe XCFramework powinno połączyć wariant urządzenia i symulatora; jego
-pakietowanie należy do projektu aplikacji, nie rdzenia obliczeniowego.
+The C header can be exposed to Swift through a bridging header or module map.
+The target XCFramework should combine device and simulator variants; packaging
+it belongs to the application project, not the computation core.
 
-CI wykonuje testy hosta na Linuxie, Windowsie i macOS, cross-kompiluje
-`tatra_mobile` dla Android arm64-v8a i iOS arm64 oraz uruchamia ASan/UBSan na Linuxie.
+CI runs host tests on Linux, Windows, and macOS, cross-compiles `tatra_mobile`
+for Android arm64-v8a and iOS arm64, and runs ASan/UBSan on Linux.
 
-## Dane telefonu — odpowiedzialność adaptera
+## Phone Data — Adapter Responsibilities
 
-Warstwa platformowa musi dostarczyć:
+The platform layer must provide:
 
-- pozycję WGS84 i wysokość **elipsoidalną**, nie bezrefleksyjnie wysokość GPS/mapy;
-- kwaternion `camera_from_enu` w kolejności `w,x,y,z`;
-- heading względem północy geograficznej, z korektą deklinacji magnetycznej;
-- mapowanie osi urządzenia do osi kamery i aktualnej orientacji ekranu;
-- intrinsics właściwe dla obiektywu, cropu, stabilizacji i rozmiaru klatki;
-- wspólną podstawę czasu pozy/orientacji i klatek;
-- przetworzone zasoby regionu zgodne z wersją danych.
+- a WGS84 position and **ellipsoidal** height, rather than blindly using a
+  GPS/map elevation;
+- a `camera_from_enu` quaternion in `w,x,y,z` order;
+- heading relative to true north, including magnetic-declination correction;
+- a mapping from device axes to camera axes and the current screen orientation;
+- intrinsics appropriate for the lens, crop, stabilization, and frame size;
+- a common time base for pose/orientation samples and frames;
+- processed regional assets that match the data-format version.
 
-Biblioteka celowo nie zgaduje tych wartości. Błędna konwencja sensora może dać
-liczbowo poprawny, ale wizualnie przesunięty overlay. Na początek należy nagrać
-krótką sesję z telefonu i odtworzyć ją offline, zanim zostanie dodany tryb live.
+The library deliberately does not guess these values. An incorrect sensor
+convention can produce a numerically valid but visually shifted overlay. Start
+by recording a short phone session and replaying it offline before adding live mode.
 
-## Co oznacza „portable” w tym repozytorium
+## What “Portable” Means in This Repository
 
-Portable jest silnik i jego granica ABI: ten sam kod, te same testy, brak zależności
-od systemu mobilnego i konfiguracje cross-build. Katalog [android](../android/README.md)
-zawiera aplikację Kotlin/JNI, diagnostykę CameraX, intrinsics, sensorów i lokalizacji
-oraz testy syntetyczne uruchamiane również na JVM hosta. Kod platformowy pozostaje
-poza rdzeniem. Stan odbioru i ograniczenia opisuje [raport etapów Android](ANDROID_PROGRESS.md).
-Rzeczywisty pakiet używa zatwierdzonego [formatu TATRAPK v1](ANDROID_DATA_FORMAT_PROPOSAL.md),
-tworzonego przez desktopowy konwerter i weryfikowanego przez loader Androida przed JNI.
-Nie ma jeszcze adaptera Swift ani potwierdzenia kalibracji/orientacji na Galaxy S10e.
+The engine and its ABI boundary are portable: the same code, the same tests, no
+mobile-system dependencies, and cross-build configurations. The [android](../android/README.md)
+directory contains the Kotlin/JNI application, CameraX diagnostics, intrinsics,
+sensor and location handling, and synthetic tests that also run on the host JVM.
+Platform code remains outside the core. Acceptance status and limitations are
+described in the [Android stage report](ANDROID_PROGRESS.md). The real package
+uses the approved [TATRAPK v1 format](ANDROID_DATA_FORMAT_PROPOSAL.md), produced
+by the desktop converter and verified by the Android loader before JNI. There is
+not yet a Swift adapter or confirmed calibration/orientation on the Galaxy S10e.
